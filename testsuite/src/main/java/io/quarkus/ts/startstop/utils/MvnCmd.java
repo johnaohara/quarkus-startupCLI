@@ -26,7 +26,7 @@ import static io.quarkus.ts.startstop.utils.Commands.getQuarkusVersion;
  *
  * @author Michal Karm Babacek <karm@redhat.com>
  */
-public enum MvnCmds {
+public enum MvnCmd {
     JVM(new String[][]{
             new String[]{"mvn", "clean", "compile", "quarkus:build", "-Dquarkus.package.output-name=quarkus"},
             new String[]{"java", "-jar", "target/quarkus-runner.jar"}
@@ -43,15 +43,15 @@ public enum MvnCmds {
                     "mvn",
                     "io.quarkus:quarkus-maven-plugin:" + getQuarkusVersion() + ":create",
                     "-DprojectGroupId=my-groupId",
-                    "-DprojectArtifactId=" + Apps.GENERATED_SKELETON.dir,
+                    "-DprojectArtifactId=ARTIFACT_ID", // + Apps.GENERATED_SKELETON.dir,
                     "-DprojectVersion=1.0.0-SNAPSHOT",
                     "-DclassName=org.my.group.MyResource"
             }
     });
 
-    public final String[][] mvnCmds;
+    public final String[][] cmds;
 
-    MvnCmds(String[][] mvnCmds) {
-        this.mvnCmds = mvnCmds;
+    MvnCmd(String[][] mvnCmds) {
+        this.cmds = mvnCmds;
     }
 }

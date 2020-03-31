@@ -19,6 +19,7 @@
  */
 package io.quarkus.ts.startstop.utils;
 
+import io.quarkus.ts.startstop.RunnerContext;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
@@ -27,8 +28,6 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 import java.util.logging.Logger;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
@@ -43,7 +42,7 @@ public class WebpageTester {
      * @param timeoutS        in seconds
      * @param stringToLookFor string must be present on the page
      */
-    public static long testWeb(String url, long timeoutS, String stringToLookFor, boolean measureTime) throws InterruptedException, IOException {
+    public static long testWeb(String url, long timeoutS, String stringToLookFor, boolean measureTime, RunnerContext context) throws InterruptedException, IOException {
         if (StringUtils.isBlank(url)) {
             throw new IllegalArgumentException("url must not be empty");
         }
@@ -82,7 +81,7 @@ public class WebpageTester {
             }
             now = System.currentTimeMillis();
         }
-        assertTrue(found, webPage + " must contain string: `" + stringToLookFor + "'");
+        context.getRuntimeAssertion().assertTrue(found, webPage + " must contain string: `" + stringToLookFor + "'");
         return foundTimestamp - startTime;
     }
 }

@@ -38,14 +38,18 @@
             <groupId>org.jboss.resteasy</groupId>
             <artifactId>resteasy-client</artifactId>
             <version>${resteasy.version}</version>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>${commons.lang.version}</version>
-            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>${snakeYaml.version}</version>
         </dependency>
 
         <dependency>

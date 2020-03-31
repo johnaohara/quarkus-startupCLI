@@ -19,10 +19,17 @@
  */
 package io.quarkus.ts.startstop;
 
+import io.quarkus.ts.startstop.utils.App;
 import io.quarkus.ts.startstop.utils.Apps;
 import io.quarkus.ts.startstop.utils.Commands;
+import io.quarkus.ts.startstop.utils.Config;
 import io.quarkus.ts.startstop.utils.FakeOIDCServer;
-import io.quarkus.ts.startstop.utils.MvnCmds;
+import io.quarkus.ts.startstop.utils.ITAssertion;
+import io.quarkus.ts.startstop.utils.ITCommands;
+import io.quarkus.ts.startstop.utils.ITContext;
+import io.quarkus.ts.startstop.utils.ITLogs;
+import io.quarkus.ts.startstop.utils.MvnCmd;
+import io.quarkus.ts.startstop.utils.RuntimeAssertion;
 import io.quarkus.ts.startstop.utils.TestFlags;
 import io.quarkus.ts.startstop.utils.URLContent;
 import io.quarkus.ts.startstop.utils.WebpageTester;
@@ -35,35 +42,34 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static io.quarkus.ts.startstop.ArtifactGeneratorTest.supportedExtensionsSetA;
 import static io.quarkus.ts.startstop.ArtifactGeneratorTest.supportedExtensionsSetB;
-import static io.quarkus.ts.startstop.utils.Commands.cleanDir;
-import static io.quarkus.ts.startstop.utils.Commands.confAppPropsForSkeleton;
-import static io.quarkus.ts.startstop.utils.Commands.getArtifactGeneBaseDir;
-import static io.quarkus.ts.startstop.utils.Commands.getBuildCommand;
-import static io.quarkus.ts.startstop.utils.Commands.getGeneratorCommand;
-import static io.quarkus.ts.startstop.utils.Commands.getLocalMavenRepoDir;
-import static io.quarkus.ts.startstop.utils.Commands.getRunCommand;
-import static io.quarkus.ts.startstop.utils.Commands.parsePort;
-import static io.quarkus.ts.startstop.utils.Commands.processStopper;
-import static io.quarkus.ts.startstop.utils.Commands.runCommand;
-import static io.quarkus.ts.startstop.utils.Commands.waitForTcpClosed;
-import static io.quarkus.ts.startstop.utils.Logs.archiveLog;
-import static io.quarkus.ts.startstop.utils.Logs.checkJarSuffixes;
-import static io.quarkus.ts.startstop.utils.Logs.checkLog;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static io.quarkus.ts.startstop.utils.ITCommands.cleanDir;
+import static io.quarkus.ts.startstop.utils.ITCommands.confAppPropsForSkeleton;
+import static io.quarkus.ts.startstop.utils.ITCommands.getArtifactGeneBaseDir;
+import static io.quarkus.ts.startstop.utils.ITCommands.getBuildCommand;
+import static io.quarkus.ts.startstop.utils.ITCommands.getLocalMavenRepoDir;
+import static io.quarkus.ts.startstop.utils.ITCommands.getRunCommand;
+import static io.quarkus.ts.startstop.utils.ITCommands.parsePort;
+import static io.quarkus.ts.startstop.utils.ITCommands.processStopper;
+import static io.quarkus.ts.startstop.utils.ITCommands.runCommand;
+import static io.quarkus.ts.startstop.utils.ITCommands.waitForTcpClosed;
 
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
  */
 @Tag("bomtests")
 public class ArtifactGeneratorBOMTest {
+
+    private static final Map<String, App> apps = Config.loadAppDefinitions("apps.yaml");
 
     private static final Logger LOGGER = Logger.getLogger(ArtifactGeneratorBOMTest.class.getName());
 
@@ -79,13 +85,16 @@ public class ArtifactGeneratorBOMTest {
         String logsDir = appBaseDir.getAbsolutePath() + File.separator + Apps.GENERATED_SKELETON.dir + "-logs";
         String repoDir = getLocalMavenRepoDir();
 
-        List<String> generatorCmd = getGeneratorCommand(flags, MvnCmds.GENERATOR.mvnCmds[0], extensions, repoDir);
+        RunnerContext runnerContext = ITContext.testContext(cn, mn);
 
-        List<String> buildCmd = getBuildCommand(MvnCmds.JVM.mvnCmds[0], repoDir);
+        List<String> generatorCmd = ITCommands.getGeneratorCommand(flags, MvnCmd.GENERATOR.cmds[0], extensions, repoDir);
+        generatorCmd = generatorCmd.stream().map(cmd -> cmd.replaceAll("ARTIFACT_ID", Apps.GENERATED_SKELETON.dir)).collect(Collectors.toList());
 
-        List<String> runCmd = getRunCommand(MvnCmds.JVM.mvnCmds[1]);
+        List<String> buildCmd = getBuildCommand(MvnCmd.JVM.cmds[0], repoDir);
 
-        URLContent skeletonApp = Apps.GENERATED_SKELETON.urlContent;
+        List<String> runCmd = getRunCommand(MvnCmd.JVM.cmds[1]);
+
+        String  skeletonAppUrl = apps.get(Apps.GENERATED_SKELETON.dir).validationUrls().keySet().stream().findFirst().get();
 
         FakeOIDCServer fakeOIDCServer = new FakeOIDCServer(6661, "localhost");
 
@@ -103,8 +112,8 @@ public class ArtifactGeneratorBOMTest {
             buildService.shutdown();
             buildService.awaitTermination(30, TimeUnit.MINUTES);
 
-            assertTrue(generateLog.exists());
-            checkLog(cn, mn, Apps.GENERATED_SKELETON, MvnCmds.GENERATOR, generateLog);
+            runnerContext.getRuntimeAssertion().assertTrue(generateLog.exists());
+            runnerContext.getLog().checkLog(apps.get(Apps.GENERATED_SKELETON.dir), MvnCmd.GENERATOR, generateLog, runnerContext);
 
             // Config, see app-generated-skeleton/README.md
             confAppPropsForSkeleton(appDir.getAbsolutePath());
@@ -117,31 +126,31 @@ public class ArtifactGeneratorBOMTest {
             buildService.shutdown();
             buildService.awaitTermination(30, TimeUnit.MINUTES);
 
-            assertTrue(buildLogA.exists());
-            checkLog(cn, mn, Apps.GENERATED_SKELETON, MvnCmds.JVM, buildLogA);
+            runnerContext.getRuntimeAssertion().assertTrue(buildLogA.exists());
+            runnerContext.getLog().checkLog(apps.get(Apps.GENERATED_SKELETON.dir), MvnCmd.JVM, buildLogA, runnerContext);
 
             // Run
-            LOGGER.info(mn + ": Run command " + String.join(" ", MvnCmds.JVM.mvnCmds[1]));
+            LOGGER.info(mn + ": Run command " + String.join(" ", MvnCmd.JVM.cmds[1]));
             LOGGER.info("Running...");
             runLogA = new File(logsDir + File.separator + "bom-artifact-run.log");
             pA = runCommand(runCmd, appDir, runLogA);
 
             // Test web pages
-            WebpageTester.testWeb(skeletonApp.urlContent[0][0], 20,
-                    skeletonApp.urlContent[0][1], false);
+            WebpageTester.testWeb(skeletonAppUrl, 20,
+                    apps.get(Apps.GENERATED_SKELETON.dir).validationUrls().get(skeletonAppUrl), false, runnerContext);
 
             LOGGER.info("Terminating test and scanning logs...");
             pA.getInputStream().available();
-            checkLog(cn, mn, Apps.GENERATED_SKELETON, MvnCmds.JVM, runLogA);
+            runnerContext.getLog().checkLog(apps.get(Apps.GENERATED_SKELETON.dir), MvnCmd.JVM, runLogA, runnerContext);
             processStopper(pA, false);
             LOGGER.info("Gonna wait for ports closed after run...");
             // Release ports
-            assertTrue(waitForTcpClosed("localhost", parsePort(skeletonApp.urlContent[0][0]), 60),
+            runnerContext.getRuntimeAssertion().assertTrue(waitForTcpClosed("localhost", parsePort(skeletonAppUrl), 60),
                     "Main port is still open after run");
 
-            checkLog(cn, mn, Apps.GENERATED_SKELETON, MvnCmds.JVM, runLogA);
+            runnerContext.getLog().checkLog(apps.get(Apps.GENERATED_SKELETON.dir), MvnCmd.JVM, runLogA, runnerContext);
 
-            checkJarSuffixes(flags, appDir);
+            ((ITLogs)runnerContext.getLog()).checkJarSuffixes(flags, appDir);
         } finally {
             fakeOIDCServer.stop();
 
@@ -150,12 +159,12 @@ public class ArtifactGeneratorBOMTest {
                 processStopper(pA, true);
             }
             // Archive logs no matter what
-            archiveLog(cn, mn, generateLog);
+            runnerContext.getLog().archiveLog(runnerContext, generateLog);
             if (buildLogA != null) {
-                archiveLog(cn, mn, buildLogA);
+                runnerContext.getLog().archiveLog(runnerContext, buildLogA);
             }
             if (runLogA != null) {
-                archiveLog(cn, mn, runLogA);
+                runnerContext.getLog().archiveLog(runnerContext, runLogA);
             }
             cleanDir(appDir.getAbsolutePath(), logsDir);
         }

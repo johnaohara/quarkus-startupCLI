@@ -19,12 +19,17 @@
  */
 package io.quarkus.ts.startstop;
 
+import io.quarkus.ts.startstop.utils.App;
 import io.quarkus.ts.startstop.utils.Apps;
 import io.quarkus.ts.startstop.utils.Commands;
+import io.quarkus.ts.startstop.utils.Config;
 import io.quarkus.ts.startstop.utils.FakeOIDCServer;
+import io.quarkus.ts.startstop.utils.ITAssertion;
+import io.quarkus.ts.startstop.utils.ITContext;
 import io.quarkus.ts.startstop.utils.LogBuilder;
 import io.quarkus.ts.startstop.utils.Logs;
-import io.quarkus.ts.startstop.utils.MvnCmds;
+import io.quarkus.ts.startstop.utils.MvnCmd;
+import io.quarkus.ts.startstop.utils.RuntimeAssertion;
 import io.quarkus.ts.startstop.utils.TestFlags;
 import io.quarkus.ts.startstop.utils.URLContent;
 import io.quarkus.ts.startstop.utils.WebpageTester;
@@ -38,6 +43,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,30 +52,26 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static io.quarkus.ts.startstop.utils.Commands.cleanDir;
-import static io.quarkus.ts.startstop.utils.Commands.confAppPropsForSkeleton;
-import static io.quarkus.ts.startstop.utils.Commands.getArtifactGeneBaseDir;
-import static io.quarkus.ts.startstop.utils.Commands.getGeneratorCommand;
-import static io.quarkus.ts.startstop.utils.Commands.getOpenedFDs;
-import static io.quarkus.ts.startstop.utils.Commands.getRSSkB;
-import static io.quarkus.ts.startstop.utils.Commands.getRunCommand;
-import static io.quarkus.ts.startstop.utils.Commands.parsePort;
-import static io.quarkus.ts.startstop.utils.Commands.processStopper;
-import static io.quarkus.ts.startstop.utils.Commands.runCommand;
-import static io.quarkus.ts.startstop.utils.Commands.waitForTcpClosed;
+import static io.quarkus.ts.startstop.utils.ITCommands.cleanDir;
+import static io.quarkus.ts.startstop.utils.ITCommands.confAppPropsForSkeleton;
+import static io.quarkus.ts.startstop.utils.ITCommands.getArtifactGeneBaseDir;
+import static io.quarkus.ts.startstop.utils.ITCommands.getGeneratorCommand;
+import static io.quarkus.ts.startstop.utils.ITCommands.getOpenedFDs;
+import static io.quarkus.ts.startstop.utils.ITCommands.getRSSkB;
+import static io.quarkus.ts.startstop.utils.ITCommands.getRunCommand;
+import static io.quarkus.ts.startstop.utils.ITCommands.parsePort;
+import static io.quarkus.ts.startstop.utils.ITCommands.processStopper;
+import static io.quarkus.ts.startstop.utils.ITCommands.runCommand;
+import static io.quarkus.ts.startstop.utils.ITCommands.waitForTcpClosed;
 import static io.quarkus.ts.startstop.utils.Logs.SKIP;
-import static io.quarkus.ts.startstop.utils.Logs.archiveLog;
-import static io.quarkus.ts.startstop.utils.Logs.checkLog;
-import static io.quarkus.ts.startstop.utils.Logs.checkThreshold;
-import static io.quarkus.ts.startstop.utils.Logs.getLogsDir;
-import static io.quarkus.ts.startstop.utils.Logs.parseStartStopTimestamps;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
  */
 @Tag("generator")
 public class ArtifactGeneratorTest {
+
+    private static final Map<String, App> apps = Config.loadAppDefinitions("apps.yaml");
 
     private static final Logger LOGGER = Logger.getLogger(ArtifactGeneratorTest.class.getName());
 
@@ -147,11 +149,14 @@ public class ArtifactGeneratorTest {
         File appDir = new File(appBaseDir, Apps.GENERATED_SKELETON.dir);
         String logsDir = appBaseDir.getAbsolutePath() + File.separator + Apps.GENERATED_SKELETON.dir + "-logs";
 
-        List<String> generatorCmd = getGeneratorCommand(MvnCmds.GENERATOR.mvnCmds[0], extensions);
+        RunnerContext runnerContext = ITContext.testContext(cn, mn);
 
-        List<String> runCmd = getRunCommand(MvnCmds.DEV.mvnCmds[0]);
+        List<String> generatorCmd = getGeneratorCommand(MvnCmd.GENERATOR.cmds[0], extensions);
+        generatorCmd = generatorCmd.stream().map(cmd -> cmd.replaceAll("ARTIFACT_ID", Apps.GENERATED_SKELETON.dir)).collect(Collectors.toList());
 
-        URLContent skeletonApp = Apps.GENERATED_SKELETON.urlContent;
+        List<String> runCmd = getRunCommand(MvnCmd.DEV.cmds[0]);
+
+        String  skeletonAppUrl = apps.get(Apps.GENERATED_SKELETON.dir).validationUrls().keySet().stream().findFirst().get();
 
         if (flags.contains(TestFlags.WARM_UP)) {
             LOGGER.info(mn + ": Warming up setup: " + String.join(" ", generatorCmd));
@@ -175,8 +180,8 @@ public class ArtifactGeneratorTest {
             buildService.awaitTermination(30, TimeUnit.MINUTES);
             long buildEnds = System.currentTimeMillis();
 
-            assertTrue(buildLogA.exists());
-            checkLog(cn, mn, Apps.GENERATED_SKELETON, MvnCmds.GENERATOR, buildLogA);
+            runnerContext.getRuntimeAssertion().assertTrue(buildLogA.exists());
+            runnerContext.getLog().checkLog(apps.get(Apps.GENERATED_SKELETON.dir), MvnCmd.GENERATOR, buildLogA, runnerContext);
 
             // Config, see app-generated-skeleton/README.md
             confAppPropsForSkeleton(appDir.getAbsolutePath());
@@ -189,19 +194,19 @@ public class ArtifactGeneratorTest {
             // Test web pages
             // The reason for a seemingly large timeout of 20 minutes is that dev mode will be downloading the Internet on the first fresh run.
             long timeoutS = (flags.contains(TestFlags.WARM_UP) ? 20 * 60 : 60);
-            long timeToFirstOKRequest = WebpageTester.testWeb(skeletonApp.urlContent[0][0], timeoutS,
-                    skeletonApp.urlContent[0][1], true);
+            long timeToFirstOKRequest = WebpageTester.testWeb(skeletonAppUrl, timeoutS,
+                    apps.get(Apps.GENERATED_SKELETON.dir).validationUrls().get(skeletonAppUrl), true, runnerContext);
 
             if (flags.contains(TestFlags.WARM_UP)) {
                 LOGGER.info("Terminating warmup and scanning logs...");
                 pA.getInputStream().available();
-                checkLog(cn, mn, Apps.GENERATED_SKELETON, MvnCmds.GENERATOR, runLogA);
+                runnerContext.getLog().checkLog(apps.get(Apps.GENERATED_SKELETON.dir), MvnCmd.GENERATOR, runLogA, runnerContext);
                 processStopper(pA, false);
                 LOGGER.info("Gonna wait for ports closed after warmup...");
                 // Release ports
-                assertTrue(waitForTcpClosed("localhost", parsePort(skeletonApp.urlContent[0][0]), 60),
+                runnerContext.getRuntimeAssertion().assertTrue(waitForTcpClosed("localhost", parsePort(skeletonAppUrl), 60),
                         "Main port is still open after warmup");
-                checkLog(cn, mn, Apps.GENERATED_SKELETON, MvnCmds.GENERATOR, runLogA);
+                runnerContext.getLog().checkLog(apps.get(Apps.GENERATED_SKELETON.dir), MvnCmd.GENERATOR, runLogA, runnerContext);
                 return;
             }
 
@@ -213,8 +218,10 @@ public class ArtifactGeneratorTest {
                 Files.write(srcFile, src.map(l -> l.replaceAll("hello", "bye")).collect(Collectors.toList()));
             }
 
-            long timeToReloadedOKRequest = WebpageTester.testWeb(skeletonApp.urlContent[1][0], 60,
-                    skeletonApp.urlContent[1][1], true);
+            String  skeletonAppByeUrl = apps.get(Apps.GENERATED_SKELETON.dir).validationUrls().keySet().stream().skip(1).findFirst().get();
+
+            long timeToReloadedOKRequest = WebpageTester.testWeb(skeletonAppByeUrl, 60,
+                    apps.get(Apps.GENERATED_SKELETON.dir).validationUrls().get(skeletonAppByeUrl), true, runnerContext);
 
             LOGGER.info("Terminate and scan logs...");
             pA.getInputStream().available();
@@ -226,16 +233,16 @@ public class ArtifactGeneratorTest {
 
             LOGGER.info("Gonna wait for ports closed...");
             // Release ports
-            assertTrue(waitForTcpClosed("localhost", parsePort(skeletonApp.urlContent[0][0]), 60),
+            runnerContext.getRuntimeAssertion().assertTrue(waitForTcpClosed("localhost", parsePort(skeletonAppUrl), 60),
                     "Main port is still open");
-            checkLog(cn, mn, Apps.GENERATED_SKELETON, MvnCmds.GENERATOR, runLogA);
+            runnerContext.getLog().checkLog(apps.get(Apps.GENERATED_SKELETON.dir), MvnCmd.GENERATOR, runLogA, runnerContext);
 
-            float[] startedStopped = parseStartStopTimestamps(runLogA);
+            float[] startedStopped = runnerContext.getLog().parseStartStopTimestamps(runLogA);
 
-            Path measurementsLog = Paths.get(getLogsDir(cn, mn).toString(), "measurements.csv");
+            Path measurementsLog = Paths.get(runnerContext.getLog().getLogsDir(runnerContext).toString(), "measurements.csv");
             LogBuilder.Log log = new LogBuilder()
-                    .app(Apps.GENERATED_SKELETON)
-                    .mode(MvnCmds.GENERATOR)
+                    .app(apps.get(Apps.GENERATED_SKELETON.dir))
+                    .mode(MvnCmd.GENERATOR)
                     .buildTimeMs(buildEnds - buildStarts)
                     .timeToFirstOKRequestMs(timeToFirstOKRequest)
                     .timeToReloadedOKRequest(timeToReloadedOKRequest)
@@ -244,8 +251,8 @@ public class ArtifactGeneratorTest {
                     .rssKb(rssKb)
                     .openedFiles(openedFiles)
                     .build();
-            Logs.logMeasurements(log, measurementsLog);
-            checkThreshold(Apps.GENERATED_SKELETON, MvnCmds.GENERATOR, SKIP, timeToFirstOKRequest, timeToReloadedOKRequest);
+            runnerContext.getLog().logMeasurements(log, measurementsLog);
+            runnerContext.getLog().checkThreshold(apps.get(Apps.GENERATED_SKELETON.dir), MvnCmd.GENERATOR, SKIP, timeToFirstOKRequest, timeToReloadedOKRequest, runnerContext);
 
         } finally {
             fakeOIDCServer.stop();
@@ -255,10 +262,10 @@ public class ArtifactGeneratorTest {
                 processStopper(pA, true);
             }
             // Archive logs no matter what
-            archiveLog(cn, mn, buildLogA);
+            runnerContext.getLog().archiveLog(runnerContext, buildLogA);
             if (runLogA != null) {
                 // If build failed it is actually expected to have no runtime log.
-                archiveLog(cn, mn, runLogA);
+                runnerContext.getLog().archiveLog(runnerContext, runLogA);
             }
             cleanDir(appDir.getAbsolutePath(), logsDir);
         }

@@ -1,0 +1,55 @@
+---
+name: app-generated-skeleton
+dir: app-generated-skeleton
+validationUrls:
+  http://localhost:8080:  Congratulations
+  http://localhost:8080/bye: bye
+whitelistLogLines:
+  - The remote computer refused the network connection
+  - maven-error-diagnostics
+  - errorprone
+thresholds:
+  linux.generated.dev.time.to.first.ok.request.threshold.ms: 50000
+  linux.generated.dev.time.to.reload.threshold.ms: 20000
+  windows.generated.dev.time.to.first.ok.request.threshold.ms: 50000
+  windows.generated.dev.time.to.reload.threshold.ms: 20000
+---
+name:  app-jax-rs-minimal
+dir: app-jax-rs-minimal
+modes:
+  - jvm
+validationUrls:
+  http://localhost:8080: Hello from a simple JAX-RS app.
+  http://localhost:8080/data/hello: Hello World
+whitelistLogLines:
+  - maven-error-diagnostics
+  - errorprone
+thresholds:
+  linux.jvm.time.to.first.ok.request.threshold.ms: 2000
+  linux.jvm.RSS.threshold.kB: 380000
+  linux.native.time.to.first.ok.request.threshold.ms: 35
+  linux.native.RSS.threshold.kB: 90000
+  windows.jvm.time.to.first.ok.request.threshold.ms: 2000
+  windows.jvm.RSS.threshold.kB: 4000
+---
+name: app-full-microprofile
+dir: app-full-microprofile
+modes:
+  - jvm
+  - native
+validationUrls:
+  http://localhost:8080: Hello from a full MicroProfile suite
+  http://localhost:8080/data/hello: Hello World
+whitelistLogLines:
+  - maven-error-diagnostics
+  - errorprone
+thresholds:
+  linux.jvm.time.to.first.ok.request.threshold.ms: 2600
+  linux.jvm.RSS.threshold.kB: 550000
+  linux.native.time.to.first.ok.request.threshold.ms: 50
+  linux.native.RSS.threshold.kB: 120000
+  windows.jvm.time.to.first.ok.request.threshold.ms: 2500
+  windows.jvm.RSS.threshold.kB: 4000
+
+
+

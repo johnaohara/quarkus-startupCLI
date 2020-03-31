@@ -19,6 +19,7 @@
  */
 package io.quarkus.ts.startstop.utils;
 
+import io.quarkus.ts.startstop.RunnerContext;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
@@ -29,27 +30,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static io.quarkus.ts.startstop.StartStopTest.BASE_DIR;
 import static io.quarkus.ts.startstop.utils.Commands.isThisWindows;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
  */
-public class Logs {
+public class Logs implements Log {
     private static final Logger LOGGER = Logger.getLogger(Logs.class.getName());
 
-    public static final String jarSuffix = "redhat";
     private static final Pattern jarNamePattern = Pattern.compile("^((?!" + jarSuffix + ").)*jar$");
 
     private static final Pattern startedPattern = Pattern.compile(".* started in ([0-9\\.]+)s.*", Pattern.DOTALL);
@@ -68,125 +63,80 @@ public class Logs {
     private static final Pattern startedPatternControlSymbols = Pattern.compile(".* started in .*188m([0-9\\.]+).*", Pattern.DOTALL);
     private static final Pattern stoppedPatternControlSymbols = Pattern.compile(".* stopped in .*188m([0-9\\.]+).*", Pattern.DOTALL);
 
-    public static final long SKIP = -1L;
-
     // TODO: How about WARNING? Other unwanted messages?
-    public static void checkLog(String testClass, String testMethod, Apps app, MvnCmds cmd, File log) throws FileNotFoundException {
-        try (Scanner sc = new Scanner(log)) {
-            while (sc.hasNextLine()) {
-                String line = sc.nextLine();
-                boolean error = line.matches("(?i:.*ERROR.*)");
-                boolean whiteListed = false;
-                if (error) {
-                    for (String w : app.whitelistLogLines.errs) {
-                        if (line.contains(w)) {
-                            whiteListed = true;
-                            LOGGER.info(cmd.name() + "log for " + testMethod + " contains whitelisted error: `" + line + "'");
-                            break;
-                        }
-                    }
-                }
-                assertFalse(error && !whiteListed, cmd.name() + " log should not contain `ERROR' lines that are not whitelisted. " +
-                        "See testsuite" + File.separator + "target" + File.separator + "archived-logs" +
-                        File.separator + testClass + File.separator + testMethod + File.separator + log.getName());
-            }
-        }
+    @Override
+    public void checkLog(App app, MvnCmd cmd, File log, RunnerContext context) throws FileNotFoundException {
+        throw new RuntimeException("Not implmeneted for this Log generator!");
     }
 
-    public static void checkJarSuffixes(Set<TestFlags> flags, File appDir) throws IOException {
-        if (flags.contains(TestFlags.PRODUCT_BOM) || flags.contains(TestFlags.UNIVERSE_PRODUCT_BOM)) {
-            List<Path> possiblyUnwantedArtifacts = Logs.listJarsFailingNameCheck(
-                    appDir.getAbsolutePath() + File.separator + "target" + File.separator + "lib");
-            List<String> reportArtifacts = new ArrayList<>();
-            boolean containsNotWhitelisted = false;
-            for (Path p : possiblyUnwantedArtifacts) {
-                boolean found = false;
-                for (String w : WhitelistProductBomJars.PRODUCT_BOM.jarNames) {
-                    if (p.toString().contains(w)) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (found) {
-                    reportArtifacts.add("WHITELISTED: " + p);
-                } else {
-                    containsNotWhitelisted = true;
-                    reportArtifacts.add(p.toString());
-                }
-            }
-            assertFalse(containsNotWhitelisted, "There are not-whitelisted artifacts without expected string " + jarSuffix + " suffix, see: \n"
-                    + String.join("\n", reportArtifacts));
-            LOGGER.warning("There are whitelisted artifacts without expected string " + jarSuffix + " suffix, see: \n"
-                    + String.join("\n", reportArtifacts));
-        }
-    }
-
-    public static void checkThreshold(Apps app, MvnCmds cmd, long rssKb, long timeToFirstOKRequest, long timeToReloadedOKRequest) {
+    @Override
+    public void checkThreshold(App app, MvnCmd cmd, long rssKb, long timeToFirstOKRequest, long timeToReloadedOKRequest, RunnerContext context) {
         String propPrefix = isThisWindows ? "windows" : "linux";
-        if (cmd == MvnCmds.JVM) {
+        if (cmd == MvnCmd.JVM) {
             propPrefix += ".jvm";
-        } else if (cmd == MvnCmds.NATIVE) {
+        } else if (cmd == MvnCmd.NATIVE) {
             propPrefix += ".native";
-        } else if (cmd == MvnCmds.DEV) {
+        } else if (cmd == MvnCmd.DEV) {
             propPrefix += ".dev";
-        } else if (cmd == MvnCmds.GENERATOR) {
+        } else if (cmd == MvnCmd.GENERATOR) {
             propPrefix += ".generated.dev";
         } else {
             throw new IllegalArgumentException("Unexpected mode. Check MvnCmds.java.");
         }
         if (timeToFirstOKRequest != SKIP) {
-            long timeToFirstOKRequestThresholdMs = app.thresholdProperties.get(propPrefix + ".time.to.first.ok.request.threshold.ms");
-            assertTrue(timeToFirstOKRequest <= timeToFirstOKRequestThresholdMs,
+            long timeToFirstOKRequestThresholdMs = app.thresholds().get(propPrefix + ".time.to.first.ok.request.threshold.ms");
+            context.getRuntimeAssertion().assertTrue(timeToFirstOKRequest <= timeToFirstOKRequestThresholdMs,
                     "Application " + app + " in " + cmd + " mode took " + timeToFirstOKRequest
                             + " ms to get the first OK request, which is over " +
                             timeToFirstOKRequestThresholdMs + " ms threshold.");
         }
         if (rssKb != SKIP) {
-            long rssThresholdKb = app.thresholdProperties.get(propPrefix + ".RSS.threshold.kB");
-            assertTrue(rssKb <= rssThresholdKb,
+            long rssThresholdKb = app.thresholds().get(propPrefix + ".RSS.threshold.kB");
+            context.getRuntimeAssertion().assertTrue(rssKb <= rssThresholdKb,
                     "Application " + app + " in " + cmd + " consumed " + rssKb + " kB, which is over " +
                             rssThresholdKb + " kB threshold.");
         }
         if (timeToReloadedOKRequest != SKIP) {
-            long timeToReloadedOKRequestThresholdMs = app.thresholdProperties.get(propPrefix + ".time.to.reload.threshold.ms");
-            assertTrue(timeToReloadedOKRequest <= timeToReloadedOKRequestThresholdMs,
+            long timeToReloadedOKRequestThresholdMs = app.thresholds().get(propPrefix + ".time.to.reload.threshold.ms");
+            context.getRuntimeAssertion().assertTrue(timeToReloadedOKRequest <= timeToReloadedOKRequestThresholdMs,
                     "Application " + app + " in " + cmd + " mode took " + timeToReloadedOKRequest
                             + " ms to get the first OK request after dev mode reload, which is over " +
                             timeToReloadedOKRequestThresholdMs + " ms threshold.");
         }
     }
 
-    public static void archiveLog(String testClass, String testMethod, File log) throws IOException {
+    @Override
+    public void archiveLog(RunnerContext runnerContext, File log) throws IOException {
         if (log == null || !log.exists()) {
             LOGGER.severe("log must be a valid, existing file. Skipping operation.");
             return;
         }
-        if (StringUtils.isBlank(testClass)) {
-            throw new IllegalArgumentException("testClass must not be blank");
+        if (StringUtils.isBlank(runnerContext.getLogsDir())) {
+            throw new IllegalArgumentException("Log dir must not be blank");
         }
-        if (StringUtils.isBlank(testMethod)) {
-            throw new IllegalArgumentException("testMethod must not be blank");
-        }
-        Path destDir = getLogsDir(testClass, testMethod);
+        Path destDir = getLogsDir(runnerContext.getLogsDir());
         Files.createDirectories(destDir);
         String filename = log.getName();
         Files.copy(log.toPath(), Paths.get(destDir.toString(), filename));
     }
 
-    public static Path getLogsDir(String testClass, String testMethod) throws IOException {
-        Path destDir = new File(getLogsDir(testClass).toString() + File.separator + testMethod).toPath();
+    @Override
+    public Path getLogsDir(RunnerContext runnerContext) throws IOException {
+        Path destDir = new File(runnerContext.getLogsDir()).toPath();
         Files.createDirectories(destDir);
         return destDir;
     }
 
-    public static Path getLogsDir(String testClass) throws IOException {
-        Path destDir = new File(BASE_DIR + File.separator + "testsuite" + File.separator + "target" +
+    @Override
+    public Path getLogsDir(String testClass) throws IOException {
+        Path destDir = new File(Environment.getBaseDir() + File.separator + "testsuite" + File.separator + "target" +
                 File.separator + "archived-logs" + File.separator + testClass).toPath();
         Files.createDirectories(destDir);
         return destDir;
     }
 
-    public static void logMeasurements(LogBuilder.Log log, Path path) throws IOException {
+    @Override
+    public void logMeasurements(LogBuilder.Log log, Path path) throws IOException {
         if (Files.notExists(path)) {
             Files.write(path, (log.header + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE);
         }
@@ -203,14 +153,16 @@ public class Logs {
      * @param path to the root of directory tree
      * @return list of offending jar paths
      */
-    public static List<Path> listJarsFailingNameCheck(String path) throws IOException {
+    @Override
+    public List<Path> listJarsFailingNameCheck(String path) throws IOException {
         return Files.find(Paths.get(path),
                 500, //if this is not enough, something is broken anyway
                 (filePath, fileAttr) -> fileAttr.isRegularFile() && jarNamePattern.matcher(filePath.getFileName().toString()).matches())
                 .collect(Collectors.toList());
     }
 
-    public static float[] parseStartStopTimestamps(File log) throws FileNotFoundException {
+    @Override
+    public float[] parseStartStopTimestamps(File log) throws FileNotFoundException {
         float[] startedStopped = new float[]{-1f, -1f};
         try (Scanner sc = new Scanner(log)) {
             while (sc.hasNextLine()) {

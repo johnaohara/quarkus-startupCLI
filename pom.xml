@@ -44,6 +44,7 @@
         <junit.jupiter.version>5.6.0</junit.jupiter.version>
         <resteasy.version>4.3.0.Final</resteasy.version>
         <commons.lang.version>3.9</commons.lang.version>
+        <snakeYaml.version>1.26</snakeYaml.version>
     </properties>
 
     <profiles>

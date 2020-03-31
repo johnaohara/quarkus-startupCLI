@@ -47,7 +47,7 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static io.quarkus.ts.startstop.StartStopTest.BASE_DIR;
+//import static io.quarkus.ts.startstop.StartStopTest.BASE_DIR;
 
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
@@ -101,6 +101,9 @@ public class Commands {
     }
 
     public static String getQuarkusVersion() {
+        return getQuarkusVersion(null);
+    }
+    public static String getQuarkusVersion(String pomFilePath ) {
         for (String p : new String[]{"QUARKUS_VERSION", "quarkus.version"}) {
             String env = System.getenv().get(p);
             if (StringUtils.isNotBlank(env)) {
@@ -111,8 +114,12 @@ public class Commands {
                 return sys;
             }
         }
-        String failure = "Failed to determine quarkus.version. Check pom.xm, check env and sys vars QUARKUS_VERSION";
-        try (Scanner sc = new Scanner(new File(BASE_DIR + File.separator + "pom.xml"))) {
+        String failure = "Failed to determine quarkus.version. Check pom.xml, check env and sys vars QUARKUS_VERSION";
+        if (pomFilePath == null) {
+            pomFilePath = Environment.getBaseDir() + File.separator + "pom.xml";
+        }
+
+        try (Scanner sc = new Scanner(new File(pomFilePath))) {
             while (sc.hasNextLine()) {
                 String line = sc.nextLine();
                 Matcher m = quarkusVersionPattern.matcher(line);
@@ -126,21 +133,9 @@ public class Commands {
         throw new IllegalArgumentException(failure);
     }
 
-    public static String getBaseDir() {
-        String env = System.getenv().get("basedir");
-        String sys = System.getProperty("basedir");
-        if (StringUtils.isNotBlank(env)) {
-            return new File(env).getParent();
-        }
-        if (StringUtils.isBlank(sys)) {
-            throw new IllegalArgumentException("Unable to determine project.basedir.");
-        }
-        return new File(sys).getParent();
-    }
-
-    public static void cleanTarget(Apps app) {
-        String target = BASE_DIR + File.separator + app.dir + File.separator + "target";
-        String logs = BASE_DIR + File.separator + app.dir + File.separator + "logs";
+    public static void cleanTarget(App app) {
+        String target = Environment.getBaseDir() + File.separator + app.getDir() + File.separator + "target";
+        String logs = Environment.getBaseDir() + File.separator + app.getDir() + File.separator + "logs";
         cleanDir(target, logs);
     }
 
@@ -185,36 +180,9 @@ public class Commands {
         }
         buildCmd.addAll(Arrays.asList(baseCommand));
         buildCmd.add("-Dmaven.repo.local=" + repoDir);
-        buildCmd.add("--settings=" + BASE_DIR + File.separator + Apps.GENERATED_SKELETON.dir + File.separator + "settings.xml");
+//        buildCmd.add("--settings=" + Environment.getBaseDir() + File.separator + Apps.GENERATED_SKELETON.dir + File.separator + "settings.xml");
 
         return Collections.unmodifiableList(buildCmd);
-    }
-
-    public static List<String> getGeneratorCommand(Set<TestFlags> flags, String[] baseCommand, String[] extensions, String repoDir) {
-        List<String> generatorCmd = new ArrayList<>();
-        if (isThisWindows) {
-            generatorCmd.add("cmd");
-            generatorCmd.add("/C");
-        }
-        generatorCmd.addAll(Arrays.asList(baseCommand));
-        if (flags.contains(TestFlags.PRODUCT_BOM)) {
-            generatorCmd.add("-DplatformArtifactId=quarkus-product-bom");
-            generatorCmd.add("-DplatformGroupId=com.redhat.quarkus");
-            generatorCmd.add("-DplatformVersion=" + getQuarkusPlatformVersion());
-        } else if (flags.contains(TestFlags.QUARKUS_BOM)) {
-            generatorCmd.add("-DplatformArtifactId=quarkus-bom");
-        } else if (flags.contains(TestFlags.UNIVERSE_BOM)) {
-            generatorCmd.add("-DplatformArtifactId=quarkus-universe-bom");
-        } else if (flags.contains(TestFlags.UNIVERSE_PRODUCT_BOM)) {
-            generatorCmd.add("-DplatformArtifactId=quarkus-universe-bom");
-            generatorCmd.add("-DplatformGroupId=com.redhat.quarkus");
-            generatorCmd.add("-DplatformVersion=" + getQuarkusPlatformVersion());
-        }
-        generatorCmd.add("-Dextensions=" + String.join(",", extensions));
-        generatorCmd.add("-Dmaven.repo.local=" + repoDir);
-        generatorCmd.add("--settings=" + BASE_DIR + File.separator + Apps.GENERATED_SKELETON.dir + File.separator + "settings.xml");
-
-        return Collections.unmodifiableList(generatorCmd);
     }
 
     public static List<String> getGeneratorCommand(String[] baseCommand, String[] extensions) {
@@ -254,14 +222,6 @@ public class Commands {
         return false;
     }
 
-    public static void confAppPropsForSkeleton(String appDir) throws IOException {
-        // Config, see app-generated-skeleton/README.md
-        String appPropsSrc = BASE_DIR + File.separator + Apps.GENERATED_SKELETON.dir + File.separator + "application.properties";
-        String appPropsDst = appDir + File.separator + "src" + File.separator + "main" + File.separator + "resources" + File.separator + "application.properties";
-        Files.copy(Paths.get(appPropsSrc),
-                Paths.get(appPropsDst), StandardCopyOption.REPLACE_EXISTING);
-    }
-
     public static int parsePort(String url) {
         return Integer.parseInt(url.split(":")[2].split("/")[0]);
     }
@@ -287,7 +247,7 @@ public class Commands {
             if (isThisWindows) {
                 if (!force) {
                     Process p = Runtime.getRuntime().exec(new String[]{
-                            BASE_DIR + File.separator + "testsuite" + File.separator + "src" + File.separator + "it" + File.separator + "resources" + File.separator +
+                            Environment.getBaseDir() + File.separator + "testsuite" + File.separator + "src" + File.separator + "it" + File.separator + "resources" + File.separator +
                                     "CtrlC.exe ", Long.toString(pid)});
                     p.waitFor(1, TimeUnit.MINUTES);
                 }

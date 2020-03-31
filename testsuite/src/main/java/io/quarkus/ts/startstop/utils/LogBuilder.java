@@ -51,9 +51,9 @@ public class LogBuilder {
     private final String openedFilesHeader = "FDs";
     private long openedFiles = -1L;
     private final String appHeader = "App";
-    private Apps app = null;
+    private App app = null;
     private final String modeHeader = "Mode";
-    private MvnCmds mode = null;
+    private MvnCmd mode = null;
 
     public LogBuilder buildTimeMs(long buildTimeMs) {
         if (buildTimeMs <= 0) {
@@ -111,13 +111,13 @@ public class LogBuilder {
         return this;
     }
 
-    public LogBuilder app(Apps app) {
+    public LogBuilder app(App app) {
         Objects.requireNonNull(app, "Valid app flavour must be provided");
         this.app = app;
         return this;
     }
 
-    public LogBuilder mode(MvnCmds mode) {
+    public LogBuilder mode(MvnCmd mode) {
         Objects.requireNonNull(mode, "Valid app flavour must be provided");
         this.mode = mode;
         return this;
@@ -129,7 +129,7 @@ public class LogBuilder {
         if (app != null) {
             h.append(appHeader);
             h.append(',');
-            l.append(app);
+            l.append(app.getName());
             l.append(',');
         }
         if (mode != null) {
