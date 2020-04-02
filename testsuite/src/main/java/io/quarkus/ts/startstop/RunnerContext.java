@@ -1,24 +1,37 @@
 package io.quarkus.ts.startstop;
 
 import io.quarkus.ts.startstop.utils.Log;
-import io.quarkus.ts.startstop.utils.MvnCmd;
 import io.quarkus.ts.startstop.utils.RuntimeAssertion;
+
+import java.io.File;
 
 public class RunnerContext {
     protected final String baseDir;
+    protected final String appDir;
+    protected final String appFileName;
+
     protected final String logsDir;
     protected final RuntimeAssertion runtimeAssertion;
     protected final Log log;
 
-    protected RunnerContext(String baseDir, String logsDir, RuntimeAssertion runtimeAssertion, Log log) {
+    protected RunnerContext(String appDir, String baseDir, String appFileName, String logsDir, RuntimeAssertion runtimeAssertion, Log log) {
+        this.appDir = appDir;
         this.baseDir = baseDir;
+        this.appFileName = appFileName;
         this.logsDir = logsDir;
         this.runtimeAssertion = runtimeAssertion;
         this.log = log;
     }
 
+    public String getAppDir() {
+        return this.appDir;
+    }
     public String getBaseDir() {
-        return baseDir;
+        return this.baseDir;
+    }
+
+    public String getAppFileName() {
+        return appFileName;
     }
 
     public String getLogsDir() {
@@ -33,10 +46,19 @@ public class RunnerContext {
         return log;
     }
 
+    public String getAppFullPath(){
+        return this.baseDir +  File.separator + this.appDir;
+    }
+
+    public File getAppFullPathFile(){
+        return new File(getAppFullPath());
+    }
+
     public static class Builder {
 
+        protected String appDir;
         protected String baseDir;
-        protected MvnCmd mvnCmd;
+        protected String appFileName;
         protected String logsDir;
         protected RuntimeAssertion runtimeAssertion;
         protected Log log;
@@ -46,8 +68,13 @@ public class RunnerContext {
             return new Builder();
         }
 
-        public RunnerContext.Builder baseDir(String baseDir){
-            this.baseDir = baseDir;
+        public RunnerContext.Builder appDir(String appDir){
+            this.appDir = appDir;
+            return this;
+        }
+
+        public RunnerContext.Builder appFileName(String appName){
+            this.appFileName = appName;
             return this;
         }
 
@@ -66,9 +93,13 @@ public class RunnerContext {
             return this;
         }
 
+        public RunnerContext.Builder baseDir(String baseDir) {
+            this.baseDir = baseDir;
+            return this;
+        }
 
         public RunnerContext build(){
-            return new RunnerContext(this.baseDir, logsDir, runtimeAssertion, log);
+            return new RunnerContext(this.appDir, this.baseDir, this.appFileName, logsDir, runtimeAssertion, log);
         }
 
 

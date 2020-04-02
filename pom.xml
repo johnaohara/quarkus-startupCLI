@@ -45,6 +45,7 @@
         <resteasy.version>4.3.0.Final</resteasy.version>
         <commons.lang.version>3.9</commons.lang.version>
         <snakeYaml.version>1.26</snakeYaml.version>
+        <aesh.version>2.6</aesh.version>
     </properties>
 
     <profiles>

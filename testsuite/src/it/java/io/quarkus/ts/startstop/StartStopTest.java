@@ -22,51 +22,60 @@ package io.quarkus.ts.startstop;
 import io.quarkus.ts.startstop.utils.App;
 import io.quarkus.ts.startstop.utils.Apps;
 import io.quarkus.ts.startstop.utils.Config;
+import io.quarkus.ts.startstop.utils.Environment;
 import io.quarkus.ts.startstop.utils.ITContext;
-import io.quarkus.ts.startstop.utils.MvnCmd;
+import io.quarkus.ts.startstop.utils.RunnerMvnCmd;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
+import java.util.logging.Logger;
+
+import static io.quarkus.ts.startstop.utils.Commands.getArtifactGeneBaseDir;
 
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
  */
 @Tag("startstop")
 public class StartStopTest {
+    private static final Logger LOGGER = Logger.getLogger(StartStopTest.class.getName());
 
-    public static void testRuntime(TestInfo testInfo, Apps testApp, MvnCmd mvnCmd) throws IOException, InterruptedException {
+    public void testRuntime(TestInfo testInfo, Apps testApp, RunnerMvnCmd mvnCmd) throws IOException, InterruptedException {
         App app = Config.loadAppDefinitions("apps.yaml").get(testApp.dir);
         if (app == null) {
             throw new IllegalArgumentException("Can not find definition for: " + testApp.dir);
         }
 
-        StartStopRunner.testRuntime(app
-                , ITContext.testContext(testInfo.getTestClass().get().getCanonicalName(), testInfo.getTestMethod().get().getName())
+        StartStopRunner.testStartup(app
+                , ITContext.testContext(testApp.dir
+                        , Environment.getBaseDir()
+                        , testInfo.getTestClass().get().getCanonicalName()
+                        , testInfo.getTestMethod().get().getName()
+                )
                 , mvnCmd);
     }
 
 
     @Test
     public void jaxRsMinimalJVM(TestInfo testInfo) throws IOException, InterruptedException {
-        testRuntime(testInfo, Apps.JAX_RS_MINIMAL, MvnCmd.JVM);
+        testRuntime(testInfo, Apps.JAX_RS_MINIMAL, RunnerMvnCmd.JVM);
     }
 
     @Test
     @Tag("native")
     public void jaxRsMinimalNative(TestInfo testInfo) throws IOException, InterruptedException {
-        testRuntime(testInfo, Apps.JAX_RS_MINIMAL, MvnCmd.NATIVE);
+        testRuntime(testInfo, Apps.JAX_RS_MINIMAL, RunnerMvnCmd.NATIVE);
     }
 
     @Test
     public void fullMicroProfileJVM(TestInfo testInfo) throws IOException, InterruptedException {
-        testRuntime(testInfo, Apps.FULL_MICROPROFILE, MvnCmd.JVM);
+        testRuntime(testInfo, Apps.FULL_MICROPROFILE, RunnerMvnCmd.JVM);
     }
 
     @Test
     @Tag("native")
     public void fullMicroProfileNative(TestInfo testInfo) throws IOException, InterruptedException {
-        testRuntime(testInfo, Apps.FULL_MICROPROFILE, MvnCmd.NATIVE);
+        testRuntime(testInfo, Apps.FULL_MICROPROFILE, RunnerMvnCmd.NATIVE);
     }
 }

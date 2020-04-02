@@ -19,6 +19,7 @@
  */
 package io.quarkus.ts.startstop.utils;
 
+import io.quarkus.ts.startstop.RunnerContext;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -31,9 +32,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -41,13 +39,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-//import static io.quarkus.ts.startstop.StartStopTest.BASE_DIR;
 
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
@@ -133,9 +129,9 @@ public class Commands {
         throw new IllegalArgumentException(failure);
     }
 
-    public static void cleanTarget(App app) {
-        String target = Environment.getBaseDir() + File.separator + app.getDir() + File.separator + "target";
-        String logs = Environment.getBaseDir() + File.separator + app.getDir() + File.separator + "logs";
+    public static void cleanTarget(RunnerContext runnerContext) {
+        String target = Environment.getBaseDir() + File.separator + runnerContext.getAppDir() + File.separator + "target";
+        String logs = Environment.getBaseDir() + File.separator + runnerContext.getAppDir() + File.separator + "logs";
         cleanDir(target, logs);
     }
 
@@ -227,6 +223,9 @@ public class Commands {
     }
 
     public static Process runCommand(List<String> command, File directory, File logFile) {
+        StringBuilder cmdBuilder = new StringBuilder();
+        command.stream().forEach(cmd -> cmdBuilder.append(cmd).append(" "));
+
         ProcessBuilder pa = new ProcessBuilder(command);
         Map<String, String> envA = pa.environment();
         envA.put("PATH", System.getenv("PATH"));
@@ -235,6 +234,8 @@ public class Commands {
         pa.redirectOutput(ProcessBuilder.Redirect.to(logFile));
         Process pA = null;
         try {
+            LOGGER.info("Running process: " + cmdBuilder.toString());
+            LOGGER.info("In Dir: " + directory);
             pA = pa.start();
         } catch (IOException e) {
             e.printStackTrace();
@@ -377,18 +378,7 @@ public class Commands {
 
         @Override
         public void run() {
-            ProcessBuilder pb = new ProcessBuilder(command);
-            Map<String, String> env = pb.environment();
-            env.put("PATH", System.getenv("PATH"));
-            pb.directory(directory);
-            pb.redirectErrorStream(true);
-            pb.redirectOutput(ProcessBuilder.Redirect.to(log));
-            Process p = null;
-            try {
-                p = pb.start();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            Process p = Commands.runCommand(command, this.directory, this.log);
             try {
                 Objects.requireNonNull(p).waitFor(timeoutMinutes, TimeUnit.MINUTES);
             } catch (InterruptedException e) {

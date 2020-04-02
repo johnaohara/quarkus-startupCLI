@@ -1,6 +1,5 @@
 ---
 name: app-generated-skeleton
-dir: app-generated-skeleton
 validationUrls:
   http://localhost:8080:  Congratulations
   http://localhost:8080/bye: bye
@@ -15,7 +14,6 @@ thresholds:
   windows.generated.dev.time.to.reload.threshold.ms: 20000
 ---
 name:  app-jax-rs-minimal
-dir: app-jax-rs-minimal
 modes:
   - jvm
 validationUrls:
@@ -33,7 +31,6 @@ thresholds:
   windows.jvm.RSS.threshold.kB: 4000
 ---
 name: app-full-microprofile
-dir: app-full-microprofile
 modes:
   - jvm
   - native

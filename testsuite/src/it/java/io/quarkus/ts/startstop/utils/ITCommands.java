@@ -11,8 +11,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import static io.quarkus.ts.startstop.utils.Commands.getQuarkusPlatformVersion;
-
 public class ITCommands extends Commands {
 
     public static void confAppPropsForSkeleton(String appDir) throws IOException {

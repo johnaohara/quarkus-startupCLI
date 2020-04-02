@@ -6,7 +6,6 @@ import java.util.Objects;
 
 public class App {
     private String name;
-    private String dir;
     private List<String> modes;
     private List<String> whitelistLogLines;
     private Map<String, String> validationUrls;
@@ -47,14 +46,6 @@ public class App {
         this.thresholds = thresholds;
     }
 
-    public String getDir() {
-        return dir;
-    }
-
-    public void setDir(String dir) {
-        this.dir = dir;
-    }
-
     public List<String> modes() {
         return modes;
     }
@@ -69,7 +60,7 @@ public class App {
         if (o == null || getClass() != o.getClass()) return false;
         App app = (App) o;
         return Objects.equals(name, app.name) &&
-                Objects.equals(dir, app.dir) &&
+                Objects.equals(modes, app.modes) &&
                 Objects.equals(whitelistLogLines, app.whitelistLogLines) &&
                 Objects.equals(validationUrls, app.validationUrls) &&
                 Objects.equals(thresholds, app.thresholds);
@@ -77,14 +68,14 @@ public class App {
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, dir, whitelistLogLines, validationUrls, thresholds);
+        return Objects.hash(name, modes, whitelistLogLines, validationUrls, thresholds);
     }
 
     @Override
     public String toString() {
         return "App{" +
                 "name='" + name + '\'' +
-                ", dir='" + dir + '\'' +
+                ", modes=" + modes +
                 ", whitelistLogLines=" + whitelistLogLines +
                 ", validationUrls=" + validationUrls +
                 ", thresholds=" + thresholds +

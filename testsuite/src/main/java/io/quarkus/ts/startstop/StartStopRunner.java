@@ -17,35 +17,31 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-
-
 public class StartStopRunner {
     private static final Logger LOGGER = Logger.getLogger(StartStopRunner.class.getName());
 
-    public static void testRuntime(App app, RunnerContext runnerContext, MvnCmd mvnCmd) throws IOException, InterruptedException {
-        if (runnerContext.baseDir == null){
-            throw new IllegalArgumentException("Base Directory has not been set");
+    public static void testStartup(App app, RunnerContext runnerContext, MvnCmd mvnCmd) throws IOException, InterruptedException {
+        if (runnerContext.appDir == null){
+            throw new IllegalArgumentException("App Directory has not been set");
         }
         if (mvnCmd == null){
             throw new IllegalArgumentException("Maven commands have not been defined for build");
         }
 
-        LOGGER.info("Testing app: " + app.getName() + ", mode: " + mvnCmd.toString());
-
         Process pA = null;
         File buildLogA = null;
         File runLogA = null;
-        File appDir = new File(runnerContext.getBaseDir() + File.separator + app.getDir());
+        File appDir = new File(runnerContext.getAppFullPath());
 
         try {
             // Cleanup
-            Commands.cleanTarget(app);
+            Commands.cleanTarget(runnerContext);
             Files.createDirectories(Paths.get(appDir.getAbsolutePath() + File.separator + "logs"));
 
             // Build
             buildLogA = new File(appDir.getAbsolutePath() + File.separator + "logs" + File.separator + mvnCmd.name().toLowerCase() + "-build.log");
             ExecutorService buildService = Executors.newFixedThreadPool(1);
-            buildService.submit(new Commands.ProcessRunner(appDir, buildLogA, Commands.getBuildCommand(mvnCmd.cmds[0]), 20));
+            buildService.submit(new Commands.ProcessRunner(appDir, buildLogA, Commands.getBuildCommand(mvnCmd.cmds()[0]), 20));
             long buildStarts = System.currentTimeMillis();
             buildService.shutdown();
             buildService.awaitTermination(30, TimeUnit.MINUTES);
@@ -57,7 +53,8 @@ public class StartStopRunner {
             // Run
             LOGGER.info("Running...");
             runLogA = new File(appDir.getAbsolutePath() + File.separator + "logs" + File.separator + mvnCmd.name().toLowerCase() + "-run.log");
-            pA = Commands.runCommand(Commands.getRunCommand(mvnCmd.cmds[1]), appDir, runLogA);
+//            runLogA = new File(runnerContext.getLogsDir() + File.separator + app.getName().toLowerCase() + "-run.log");
+            pA = Commands.runCommand(Commands.getRunCommand(mvnCmd.cmds()[1]), appDir, runLogA);
 
             // Test web pages
             String firstValidationUrl = app.validationUrls().keySet().stream().findFirst().get();
@@ -125,7 +122,7 @@ public class StartStopRunner {
             // Archive logs no matter what
             runnerContext.log.archiveLog(runnerContext, buildLogA);
             runnerContext.log.archiveLog(runnerContext, runLogA);
-            Commands.cleanTarget(app);
+            Commands.cleanTarget(runnerContext);
         }
     }
 

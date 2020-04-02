@@ -19,6 +19,13 @@ public class ITLogs extends Logs {
 
     public static final String jarSuffix = "redhat";
 
+    protected ITLogs() {
+    }
+
+    public static ITLogs getInstance(){
+        return new ITLogs();
+    }
+
     public void checkJarSuffixes(Set<TestFlags> flags, File appDir) throws IOException {
         if (flags.contains(TestFlags.PRODUCT_BOM) || flags.contains(TestFlags.UNIVERSE_PRODUCT_BOM)) {
             List<Path> possiblyUnwantedArtifacts = super.listJarsFailingNameCheck(

@@ -1,0 +1,10 @@
+name: getting-started
+validationUrls:
+  http://localhost:8080:  Congratulations
+  http://localhost:8080/bye: bye
+
+thresholds:
+  linux.generated.dev.time.to.first.ok.request.threshold.ms: 50000
+  linux.generated.dev.time.to.reload.threshold.ms: 20000
+  windows.generated.dev.time.to.first.ok.request.threshold.ms: 50000
+  windows.generated.dev.time.to.reload.threshold.ms: 20000

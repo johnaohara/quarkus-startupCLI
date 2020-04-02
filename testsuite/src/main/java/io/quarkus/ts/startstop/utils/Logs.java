@@ -49,6 +49,10 @@ public class Logs implements Log {
 
     private static final Pattern startedPattern = Pattern.compile(".* started in ([0-9\\.]+)s.*", Pattern.DOTALL);
     private static final Pattern stoppedPattern = Pattern.compile(".* stopped in ([0-9\\.]+)s.*", Pattern.DOTALL);
+
+    public static Logs instance(){
+        return new Logs();
+    }
     /*
      Due to console colouring, Windows has control characters in the sequence.
      So "1.778s" in "started in 1.778s." becomes  "[38;5;188m1.778".
@@ -72,17 +76,8 @@ public class Logs implements Log {
     @Override
     public void checkThreshold(App app, MvnCmd cmd, long rssKb, long timeToFirstOKRequest, long timeToReloadedOKRequest, RunnerContext context) {
         String propPrefix = isThisWindows ? "windows" : "linux";
-        if (cmd == MvnCmd.JVM) {
-            propPrefix += ".jvm";
-        } else if (cmd == MvnCmd.NATIVE) {
-            propPrefix += ".native";
-        } else if (cmd == MvnCmd.DEV) {
-            propPrefix += ".dev";
-        } else if (cmd == MvnCmd.GENERATOR) {
-            propPrefix += ".generated.dev";
-        } else {
-            throw new IllegalArgumentException("Unexpected mode. Check MvnCmds.java.");
-        }
+        propPrefix += cmd.prefix();
+
         if (timeToFirstOKRequest != SKIP) {
             long timeToFirstOKRequestThresholdMs = app.thresholds().get(propPrefix + ".time.to.first.ok.request.threshold.ms");
             context.getRuntimeAssertion().assertTrue(timeToFirstOKRequest <= timeToFirstOKRequestThresholdMs,
