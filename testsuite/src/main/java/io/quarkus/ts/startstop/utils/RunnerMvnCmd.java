@@ -32,7 +32,7 @@ public enum RunnerMvnCmd implements MvnCmd {
             , ".jvm"
     ),
     JVM_UBER(new String[][]{
-            new String[]{"mvn", "clean", "compile", "quarkus:build", "-Dquarkus.package.output-name=quarkus"},
+            new String[]{"mvn", "clean", "compile", "quarkus:build", "-Dquarkus.package.output-name=quarkus", "-Dquarkus.package.uber-jar=true"},
             new String[]{"java", "-jar", "target/quarkus-runner.jar"}
     }
             , ".jvm"

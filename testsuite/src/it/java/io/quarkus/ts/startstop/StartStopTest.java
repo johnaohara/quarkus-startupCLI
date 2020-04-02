@@ -63,6 +63,11 @@ public class StartStopTest {
     }
 
     @Test
+    public void jaxRsMinimalJVMUber(TestInfo testInfo) throws IOException, InterruptedException {
+        testRuntime(testInfo, Apps.JAX_RS_MINIMAL, RunnerMvnCmd.JVM_UBER);
+    }
+
+    @Test
     @Tag("native")
     public void jaxRsMinimalNative(TestInfo testInfo) throws IOException, InterruptedException {
         testRuntime(testInfo, Apps.JAX_RS_MINIMAL, RunnerMvnCmd.NATIVE);
@@ -71,6 +76,11 @@ public class StartStopTest {
     @Test
     public void fullMicroProfileJVM(TestInfo testInfo) throws IOException, InterruptedException {
         testRuntime(testInfo, Apps.FULL_MICROPROFILE, RunnerMvnCmd.JVM);
+    }
+
+    @Test
+    public void fullMicroProfileJVMUber(TestInfo testInfo) throws IOException, InterruptedException {
+        testRuntime(testInfo, Apps.FULL_MICROPROFILE, RunnerMvnCmd.JVM_UBER);
     }
 
     @Test
