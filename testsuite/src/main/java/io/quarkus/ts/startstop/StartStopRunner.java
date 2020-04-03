@@ -36,10 +36,10 @@ public class StartStopRunner {
         try {
             // Cleanup
             Commands.cleanTarget(runnerContext);
-            Files.createDirectories(Paths.get(appDir.getAbsolutePath() + File.separator + "logs"));
+            Files.createDirectories(Paths.get(runnerContext.getLogsDir()));
 
             // Build
-            buildLogA = new File(appDir.getAbsolutePath() + File.separator + "logs" + File.separator + mvnCmd.name().toLowerCase() + "-build.log");
+            buildLogA = new File(runnerContext.getLogsDir() + File.separator + mvnCmd.name().toLowerCase() + "-build.log");
             ExecutorService buildService = Executors.newFixedThreadPool(1);
             buildService.submit(new Commands.ProcessRunner(appDir, buildLogA, Commands.getBuildCommand(mvnCmd.cmds()[0]), 20));
             long buildStarts = System.currentTimeMillis();
@@ -52,7 +52,7 @@ public class StartStopRunner {
 
             // Run
             LOGGER.info("Running...");
-            runLogA = new File(appDir.getAbsolutePath() + File.separator + "logs" + File.separator + mvnCmd.name().toLowerCase() + "-run.log");
+            runLogA = new File(runnerContext.getLogsDir() + File.separator + mvnCmd.name().toLowerCase() + "-run.log");
 //            runLogA = new File(runnerContext.getLogsDir() + File.separator + app.getName().toLowerCase() + "-run.log");
             pA = Commands.runCommand(Commands.getRunCommand(mvnCmd.cmds()[1]), appDir, runLogA);
 

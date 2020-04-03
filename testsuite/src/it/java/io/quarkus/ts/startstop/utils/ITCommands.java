@@ -31,7 +31,7 @@ public class ITCommands extends Commands {
         if (flags.contains(TestFlags.PRODUCT_BOM)) {
             generatorCmd.add("-DplatformArtifactId=quarkus-product-bom");
             generatorCmd.add("-DplatformGroupId=com.redhat.quarkus");
-            generatorCmd.add("-DplatformVersion=" + getQuarkusPlatformVersion());
+            generatorCmd.add("-DplatformVersion=" + getQuarkusPlatformVersion(Environment.getBaseDir()));
         } else if (flags.contains(TestFlags.QUARKUS_BOM)) {
             generatorCmd.add("-DplatformArtifactId=quarkus-bom");
         } else if (flags.contains(TestFlags.UNIVERSE_BOM)) {
@@ -39,7 +39,7 @@ public class ITCommands extends Commands {
         } else if (flags.contains(TestFlags.UNIVERSE_PRODUCT_BOM)) {
             generatorCmd.add("-DplatformArtifactId=quarkus-universe-bom");
             generatorCmd.add("-DplatformGroupId=com.redhat.quarkus");
-            generatorCmd.add("-DplatformVersion=" + getQuarkusPlatformVersion());
+            generatorCmd.add("-DplatformVersion=" + getQuarkusPlatformVersion(Environment.getBaseDir()));
         }
         generatorCmd.add("-Dextensions=" + String.join(",", extensions));
         generatorCmd.add("-Dmaven.repo.local=" + repoDir);

@@ -81,7 +81,7 @@ public class Commands {
         return System.getProperty("user.home") + File.separator + ".m2" + File.separator + "repository";
     }
 
-    public static String getQuarkusPlatformVersion() {
+    public static String getQuarkusPlatformVersion(String appPath) {
         for (String p : new String[]{"QUARKUS_PLATFORM_VERSION", "quarkus.platform.version"}) {
             String env = System.getenv().get(p);
             if (StringUtils.isNotBlank(env)) {
@@ -93,13 +93,14 @@ public class Commands {
             }
         }
         LOGGER.warning("Failed to detect quarkus.platform.version/QUARKUS_PLATFORM_VERSION, defaulting to getQuarkusVersion().");
-        return getQuarkusVersion();
+        return getQuarkusVersion(appPath);
     }
 
-    public static String getQuarkusVersion() {
-        return getQuarkusVersion(null);
+    public static String getQuarkusVersion(String appPath) {
+        return getQuarkusVersion(null, appPath);
     }
-    public static String getQuarkusVersion(String pomFilePath ) {
+
+    public static String getQuarkusVersion(String pomFilePath, String appPath ) {
         for (String p : new String[]{"QUARKUS_VERSION", "quarkus.version"}) {
             String env = System.getenv().get(p);
             if (StringUtils.isNotBlank(env)) {
@@ -111,27 +112,29 @@ public class Commands {
             }
         }
         String failure = "Failed to determine quarkus.version. Check pom.xml, check env and sys vars QUARKUS_VERSION";
-        if (pomFilePath == null) {
-            pomFilePath = Environment.getBaseDir() + File.separator + "pom.xml";
+        if (pomFilePath == null && appPath != null) {
+            pomFilePath = appPath + File.separator + "pom.xml";
         }
 
-        try (Scanner sc = new Scanner(new File(pomFilePath))) {
-            while (sc.hasNextLine()) {
-                String line = sc.nextLine();
-                Matcher m = quarkusVersionPattern.matcher(line);
-                if (m.matches()) {
-                    return m.group(1);
+        if (pomFilePath != null) {
+            try (Scanner sc = new Scanner(new File(pomFilePath))) {
+                while (sc.hasNextLine()) {
+                    String line = sc.nextLine();
+                    Matcher m = quarkusVersionPattern.matcher(line);
+                    if (m.matches()) {
+                        return m.group(1);
+                    }
                 }
+            } catch (FileNotFoundException e) {
+                throw new IllegalArgumentException(failure);
             }
-        } catch (FileNotFoundException e) {
-            throw new IllegalArgumentException(failure);
         }
         throw new IllegalArgumentException(failure);
     }
 
     public static void cleanTarget(RunnerContext runnerContext) {
-        String target = Environment.getBaseDir() + File.separator + runnerContext.getAppDir() + File.separator + "target";
-        String logs = Environment.getBaseDir() + File.separator + runnerContext.getAppDir() + File.separator + "logs";
+        String target = runnerContext.getAppDir() + File.separator + "target";
+        String logs = runnerContext.getAppDir() + File.separator + "logs";
         cleanDir(target, logs);
     }
 

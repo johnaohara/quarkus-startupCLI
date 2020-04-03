@@ -7,9 +7,9 @@ public enum ITMvnCmd implements MvnCmd{
     GENERATOR(new String[][]{
             new String[]{
                     "mvn",
-                    "io.quarkus:quarkus-maven-plugin:" + getQuarkusVersion() + ":create",
+                    "io.quarkus:quarkus-maven-plugin:" + getQuarkusVersion(Environment.getBaseDir()) + ":create",
                     "-DprojectGroupId=my-groupId",
-                    "-DprojectArtifactId=ARTIFACT_ID", // + Apps.GENERATED_SKELETON.dir,
+                    "-DprojectArtifactId=" + Apps.GENERATED_SKELETON.dir,
                     "-DprojectVersion=1.0.0-SNAPSHOT",
                     "-DclassName=org.my.group.MyResource"
             }

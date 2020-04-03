@@ -8,16 +8,16 @@ import java.io.File;
 public class RunnerContext {
     protected final String baseDir;
     protected final String appDir;
-    protected final String appFileName;
+//    protected final String appFileName;
 
     protected final String logsDir;
     protected final RuntimeAssertion runtimeAssertion;
     protected final Log log;
 
-    protected RunnerContext(String appDir, String baseDir, String appFileName, String logsDir, RuntimeAssertion runtimeAssertion, Log log) {
+    protected RunnerContext(String appDir, String baseDir, String logsDir, RuntimeAssertion runtimeAssertion, Log log) {
         this.appDir = appDir;
         this.baseDir = baseDir;
-        this.appFileName = appFileName;
+//        this.appFileName = appFileName;
         this.logsDir = logsDir;
         this.runtimeAssertion = runtimeAssertion;
         this.log = log;
@@ -30,9 +30,9 @@ public class RunnerContext {
         return this.baseDir;
     }
 
-    public String getAppFileName() {
-        return appFileName;
-    }
+//    public String getAppFileName() {
+//        return appFileName;
+//    }
 
     public String getLogsDir() {
         return logsDir;
@@ -47,6 +47,10 @@ public class RunnerContext {
     }
 
     public String getAppFullPath(){
+        //TODO:: what scenarios do we have a null base dir?
+        if ( this.baseDir == null){
+            return this.appDir;
+        }
         return this.baseDir +  File.separator + this.appDir;
     }
 
@@ -58,7 +62,7 @@ public class RunnerContext {
 
         protected String appDir;
         protected String baseDir;
-        protected String appFileName;
+//        protected String appFileName;
         protected String logsDir;
         protected RuntimeAssertion runtimeAssertion;
         protected Log log;
@@ -73,10 +77,10 @@ public class RunnerContext {
             return this;
         }
 
-        public RunnerContext.Builder appFileName(String appName){
-            this.appFileName = appName;
-            return this;
-        }
+//        public RunnerContext.Builder appFileName(String appName){
+//            this.appFileName = appName;
+//            return this;
+//        }
 
         public RunnerContext.Builder logsDir(String logsDir){
             this.logsDir = logsDir;
@@ -99,7 +103,7 @@ public class RunnerContext {
         }
 
         public RunnerContext build(){
-            return new RunnerContext(this.appDir, this.baseDir, this.appFileName, logsDir, runtimeAssertion, log);
+            return new RunnerContext(this.appDir, this.baseDir, logsDir, runtimeAssertion, log);
         }
 
 

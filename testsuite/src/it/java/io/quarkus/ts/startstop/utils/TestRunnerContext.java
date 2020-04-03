@@ -9,8 +9,8 @@ public class TestRunnerContext extends RunnerContext {
     private final String testClass;
     private final String testMethod;
 
-    protected TestRunnerContext(String appDir, String baseDir, String appName, String logsDir, RuntimeAssertion runtimeAssertion, Log log, String testClass, String testMethod) {
-        super(appDir, baseDir, appName, logsDir, runtimeAssertion, log);
+    protected TestRunnerContext(String appDir, String baseDir,  String logsDir, RuntimeAssertion runtimeAssertion, Log log, String testClass, String testMethod) {
+        super(appDir, baseDir, logsDir, runtimeAssertion, log);
         this.testClass = testClass;
         this.testMethod = testMethod;
     }
@@ -26,6 +26,11 @@ public class TestRunnerContext extends RunnerContext {
     public String getTestMethod() {
         return testMethod;
     }
+
+    public String getAppDir() {
+        return Environment.getBaseDir() + File.separator + super.appDir;
+    }
+
 
     public static class Builder extends RunnerContext.Builder{
 
@@ -47,7 +52,7 @@ public class TestRunnerContext extends RunnerContext {
         }
 
         public TestRunnerContext build(){
-            return new TestRunnerContext(this.appDir, this.baseDir, this.appFileName, logsDir, runtimeAssertion, log, this.testClass, this.testMethod);
+            return new TestRunnerContext(this.appDir, this.baseDir, logsDir, runtimeAssertion, log, this.testClass, this.testMethod);
         }
     }
 }

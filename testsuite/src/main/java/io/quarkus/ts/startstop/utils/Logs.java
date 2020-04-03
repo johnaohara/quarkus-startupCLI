@@ -70,8 +70,27 @@ public class Logs implements Log {
     // TODO: How about WARNING? Other unwanted messages?
     @Override
     public void checkLog(App app, MvnCmd cmd, File log, RunnerContext context) throws FileNotFoundException {
-        throw new RuntimeException("Not implmeneted for this Log generator!");
+        try (Scanner sc = new Scanner(log)) {
+            while (sc.hasNextLine()) {
+                String line = sc.nextLine();
+                boolean error = line.matches("(?i:.*ERROR.*)");
+                boolean whiteListed = false;
+                if (error) {
+                    if(app.getWhitelistLogLines() != null) {
+                        for (String w : app.getWhitelistLogLines()) {
+                            if (line.contains(w)) {
+                                whiteListed = true;
+                                LOGGER.info(cmd.name() + "log for " + app.getName() + " contains whitelisted error: `" + line + "'");
+                                break;
+                            }
+                        }
+                    }
+                }
+                context.getRuntimeAssertion().assertFalse(error && !whiteListed, cmd.name() + " log should not contain `ERROR' lines that are not whitelisted. ");
+            }
+        }
     }
+
 
     @Override
     public void checkThreshold(App app, MvnCmd cmd, long rssKb, long timeToFirstOKRequest, long timeToReloadedOKRequest, RunnerContext context) {
@@ -79,24 +98,25 @@ public class Logs implements Log {
         propPrefix += cmd.prefix();
 
         if (timeToFirstOKRequest != SKIP) {
-            long timeToFirstOKRequestThresholdMs = app.thresholds().get(propPrefix + ".time.to.first.ok.request.threshold.ms");
-            context.getRuntimeAssertion().assertTrue(timeToFirstOKRequest <= timeToFirstOKRequestThresholdMs,
-                    "Application " + app + " in " + cmd + " mode took " + timeToFirstOKRequest
-                            + " ms to get the first OK request, which is over " +
-                            timeToFirstOKRequestThresholdMs + " ms threshold.");
+            checkThreshold(app, cmd, context, propPrefix + ".time.to.first.ok.request.threshold.ms", timeToFirstOKRequest);
         }
         if (rssKb != SKIP) {
-            long rssThresholdKb = app.thresholds().get(propPrefix + ".RSS.threshold.kB");
-            context.getRuntimeAssertion().assertTrue(rssKb <= rssThresholdKb,
-                    "Application " + app + " in " + cmd + " consumed " + rssKb + " kB, which is over " +
-                            rssThresholdKb + " kB threshold.");
+            checkThreshold(app, cmd, context, propPrefix + ".RSS.threshold.kB", rssKb);
         }
         if (timeToReloadedOKRequest != SKIP) {
-            long timeToReloadedOKRequestThresholdMs = app.thresholds().get(propPrefix + ".time.to.reload.threshold.ms");
-            context.getRuntimeAssertion().assertTrue(timeToReloadedOKRequest <= timeToReloadedOKRequestThresholdMs,
-                    "Application " + app + " in " + cmd + " mode took " + timeToReloadedOKRequest
-                            + " ms to get the first OK request after dev mode reload, which is over " +
-                            timeToReloadedOKRequestThresholdMs + " ms threshold.");
+            checkThreshold(app, cmd, context, propPrefix + ".time.to.reload.threshold.ms", timeToReloadedOKRequest);
+        }
+    }
+
+    private void checkThreshold(App app, MvnCmd cmd, RunnerContext context, String proptery, long measurement){
+        if( app.thresholds().containsKey(proptery) ) {
+            long threshold = app.thresholds().get(proptery);
+            context.getRuntimeAssertion().assertTrue(measurement <= threshold,
+                    "Application " + app + " in " + cmd + " mode took " + measurement
+                            + " ms to get the first OK request, which is over " +
+                            threshold + " ms threshold.");
+        } else {
+            LOGGER.warning("Missing threshold definition: " + proptery);
         }
     }
 
@@ -109,7 +129,8 @@ public class Logs implements Log {
         if (StringUtils.isBlank(runnerContext.getLogsDir())) {
             throw new IllegalArgumentException("Log dir must not be blank");
         }
-        Path destDir = getLogsDir(runnerContext.getLogsDir());
+        Path destDir = getLogsDir(runnerContext);
+//        Path destDir = getLogsDir(runnerContext.getLogsDir());
         Files.createDirectories(destDir);
         String filename = log.getName();
         Files.copy(log.toPath(), Paths.get(destDir.toString(), filename));

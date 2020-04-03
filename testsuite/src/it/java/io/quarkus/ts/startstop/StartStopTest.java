@@ -32,8 +32,6 @@ import org.junit.jupiter.api.TestInfo;
 import java.io.IOException;
 import java.util.logging.Logger;
 
-import static io.quarkus.ts.startstop.utils.Commands.getArtifactGeneBaseDir;
-
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
  */

@@ -35,7 +35,7 @@ public class StartStopCli {
         @Option(required = true, shortName = 'l', description = "Path to logging directory")
         private String logDir;
 
-        @Option(required = true, shortName = 'm', description = "Modes to test")
+//        @Option(required = true, shortName = 'm', description = "Modes to test")
         private List<String> modes;
 
         @Override
@@ -48,20 +48,13 @@ public class StartStopCli {
                     throw new IllegalArgumentException("Can not load configuration: " + configYaml);
                 }
 
-                File appFile = new File(applicationSrcPath);
-
-                if (appFile == null){
-                    throw new IllegalArgumentException("Can not find application: " + applicationSrcPath);
-                }
-
                 commandInvocation.println("Testing: " + applicationSrcPath);
 
                 StartStopRunner startStopRunner = new StartStopRunner();
 
                 RunnerContext runnerContext = RunnerContext.Builder.instance()
                         .logsDir(logDir)
-                        .appDir(appFile.getParent())
-                        .appFileName(appFile.getName())
+                        .appDir(applicationSrcPath)
                         .runtimeAssertion(new RunnerAssertions())
                         .log(Logs.instance())
                         .build();
