@@ -1,10 +1,12 @@
 name: getting-started
 validationUrls:
   http://localhost:8080:  Congratulations
-  http://localhost:8080/bye: bye
+  http://localhost:8080/hello: bye
 
 thresholds:
   linux.jvm.time.to.first.ok.request.threshold.ms: 50000
   linux.jvm.time.to.reload.threshold.ms: 20000
+  linux.jvm.RSS.threshold.kB: 170000
   windows.jvm.time.to.first.ok.request.threshold.ms: 50000
   windows.jvm.time.to.reload.threshold.ms: 20000
+  windows.jvm.RSS.threshold.kB: 170000

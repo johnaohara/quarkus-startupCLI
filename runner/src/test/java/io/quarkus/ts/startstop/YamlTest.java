@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
-public class DummyTest {
+public class YamlTest {
 
     private static final String YAML_DOC = "" +
             "name:  app-jax-rs-minimal\n" +

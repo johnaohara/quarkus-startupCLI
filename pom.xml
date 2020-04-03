@@ -48,6 +48,11 @@
         <aesh.version>2.6</aesh.version>
     </properties>
 
+    <modules>
+        <module>runner</module>
+        <module>testsuite</module>
+    </modules>
+
     <profiles>
         <profile>
             <id>testsuite</id>

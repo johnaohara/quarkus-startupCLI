@@ -3,19 +3,24 @@ package io.quarkus.ts.startstop;
 import io.quarkus.ts.startstop.utils.App;
 import io.quarkus.ts.startstop.utils.Config;
 import io.quarkus.ts.startstop.utils.Logs;
+import io.quarkus.ts.startstop.utils.MvnCmd;
 import io.quarkus.ts.startstop.utils.RunnerMvnCmd;
 import io.quarkus.ts.startstop.utils.RunnerAssertions;
 import org.aesh.AeshRuntimeRunner;
 import org.aesh.command.Command;
 import org.aesh.command.CommandDefinition;
 import org.aesh.command.CommandResult;
+import org.aesh.command.converter.Converter;
+import org.aesh.command.converter.ConverterInvocation;
 import org.aesh.command.invocation.CommandInvocation;
 import org.aesh.command.option.Option;
+import org.aesh.command.validator.OptionValidator;
+import org.aesh.command.validator.OptionValidatorException;
+import org.aesh.command.validator.ValidatorInvocation;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.List;
 
 public class StartStopCli {
 
@@ -35,8 +40,8 @@ public class StartStopCli {
         @Option(required = true, shortName = 'l', description = "Path to logging directory")
         private String logDir;
 
-//        @Option(required = true, shortName = 'm', description = "Modes to test")
-        private List<String> modes;
+        @Option(required = true, shortName = 'm', description = "Mode to test", converter = MvnModeConverter.class, validator = MvnModeConverter.class)
+        private MvnCmd mode;
 
         @Override
         public CommandResult execute(CommandInvocation commandInvocation) {
@@ -61,7 +66,7 @@ public class StartStopCli {
 
                 startStopRunner.testStartup(app
                         , runnerContext
-                        , RunnerMvnCmd.JVM);
+                        , mode);
 
 
                 return CommandResult.SUCCESS;
@@ -74,4 +79,21 @@ public class StartStopCli {
         }
     }
 
+    private class MvnModeConverter implements Converter<MvnCmd, ConverterInvocation>, OptionValidator {
+        @Override
+        public MvnCmd convert(ConverterInvocation input) {
+            try {
+                return RunnerMvnCmd.valueOf(input.getInput().toUpperCase());
+            } catch (Exception e){
+                return  null;
+            }
+        }
+
+        @Override
+        public void validate(ValidatorInvocation validatorInvocation) throws OptionValidatorException {
+            if(validatorInvocation.getValue() == null){
+                throw new OptionValidatorException("Invalid option for param: mode");
+            }
+        }
+    }
 }

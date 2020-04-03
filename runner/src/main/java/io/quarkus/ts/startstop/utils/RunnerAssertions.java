@@ -10,7 +10,7 @@ public class RunnerAssertions implements RuntimeAssertion {
     @Override
     public void assertFalse(boolean condition, String message) {
         if(condition){
-            LOGGER.warning(message);
+            LOGGER.severe(message);
         }
     }
 
@@ -22,7 +22,7 @@ public class RunnerAssertions implements RuntimeAssertion {
     @Override
     public void assertTrue(boolean condition) {
         if(!condition){
-            LOGGER.warning("expected: <true> but was: <false>");
+            LOGGER.severe("expected: <true> but was: <false>");
         }
     }
 }
