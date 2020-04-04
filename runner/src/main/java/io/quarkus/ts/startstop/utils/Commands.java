@@ -19,7 +19,9 @@
  */
 package io.quarkus.ts.startstop.utils;
 
-import io.quarkus.ts.startstop.RunnerContext;
+import io.quarkus.ts.startstop.context.RunResult;
+import io.quarkus.ts.startstop.context.RunnerContext;
+import io.quarkus.ts.startstop.context.BuildResult;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -32,6 +34,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -39,6 +43,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -100,7 +106,7 @@ public class Commands {
         return getQuarkusVersion(null, appPath);
     }
 
-    public static String getQuarkusVersion(String pomFilePath, String appPath ) {
+    public static String getQuarkusVersion(String pomFilePath, String appPath) {
         for (String p : new String[]{"QUARKUS_VERSION", "quarkus.version"}) {
             String env = System.getenv().get(p);
             if (StringUtils.isNotBlank(env)) {
@@ -148,6 +154,65 @@ public class Commands {
         }
     }
 
+    public static void createDirs(String... dir) {
+        for (String s : dir) {
+            try {
+                Files.createDirectories(Paths.get(s));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static BuildResult buildProject(App app, File logFile, RunnerContext runnerContext, MvnCmd mvnCmd, List<String> cmd) throws FileNotFoundException, InterruptedException {
+        BuildResult result = new BuildResult();
+
+        try {
+            SingleExecutorService.execute(runnerContext.getBaseDir(), logFile, cmd);
+        } catch (InterruptedException e) {
+            //TODO:: handle interupted thread correctly
+            e.printStackTrace();
+            Thread.currentThread().interrupt();
+        }
+
+        result.setBuildEnds(System.currentTimeMillis());
+
+        runnerContext.getRuntimeAssertion().assertTrue(logFile.exists());
+        runnerContext.getLog().checkLog(app, mvnCmd, logFile, runnerContext);
+
+        return result;
+    }
+
+    public static RunResult runProject(App app, File runLog, RunnerContext runnerContext, MvnCmd mvnCmd, List<String> cmd, String skeletonAppUrl, boolean warmUp) throws IOException, InterruptedException {
+
+        LOGGER.info("Running...");
+
+        RunResult runResult = new RunResult();
+        // Run
+        runResult.setProcess(runCommand(cmd, new File(runnerContext.getAppFullPath()), runLog));
+
+        // Test web pages
+        // The reason for a seemingly large timeout of 20 minutes is that dev mode will be downloading the Internet on the first fresh run.
+        long timeoutS = warmUp ? 20 * 60 : 60;
+        runResult.setTimeToFirstOKRequest(WebpageTester.testWeb(skeletonAppUrl, timeoutS,
+                app.validationUrls().get(skeletonAppUrl), true, runnerContext));
+
+
+        if (warmUp) {
+            LOGGER.info("Terminating warmup and scanning logs...");
+            runResult.getProcess().getInputStream().available();
+            runnerContext.getLog().checkLog(app, mvnCmd, runLog, runnerContext);
+            processStopper(runResult.getProcess(), false);
+            LOGGER.info("Gonna wait for ports closed after warmup...");
+            // Release ports
+            runnerContext.getRuntimeAssertion().assertTrue(waitForTcpClosed("localhost", parsePort(skeletonAppUrl), 60),
+                    "Main port is still open after warmup");
+            runnerContext.getLog().checkLog(app, mvnCmd, runLog, runnerContext);
+        }
+
+        return runResult;
+
+    }
     public static List<String> getRunCommand(String[] baseCommand) {
         List<String> runCmd = new ArrayList<>();
         if (isThisWindows) {

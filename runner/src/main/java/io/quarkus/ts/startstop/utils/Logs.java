@@ -19,7 +19,7 @@
  */
 package io.quarkus.ts.startstop.utils;
 
-import io.quarkus.ts.startstop.RunnerContext;
+import io.quarkus.ts.startstop.context.RunnerContext;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;

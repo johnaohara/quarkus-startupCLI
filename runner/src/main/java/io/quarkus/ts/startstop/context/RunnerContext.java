@@ -1,4 +1,4 @@
-package io.quarkus.ts.startstop;
+package io.quarkus.ts.startstop.context;
 
 import io.quarkus.ts.startstop.utils.Log;
 import io.quarkus.ts.startstop.utils.RuntimeAssertion;
@@ -8,7 +8,6 @@ import java.io.File;
 public class RunnerContext {
     protected final String baseDir;
     protected final String appDir;
-//    protected final String appFileName;
 
     protected final String logsDir;
     protected final RuntimeAssertion runtimeAssertion;
@@ -17,7 +16,6 @@ public class RunnerContext {
     protected RunnerContext(String appDir, String baseDir, String logsDir, RuntimeAssertion runtimeAssertion, Log log) {
         this.appDir = appDir;
         this.baseDir = baseDir;
-//        this.appFileName = appFileName;
         this.logsDir = logsDir;
         this.runtimeAssertion = runtimeAssertion;
         this.log = log;
@@ -29,10 +27,6 @@ public class RunnerContext {
     public String getBaseDir() {
         return this.baseDir;
     }
-
-//    public String getAppFileName() {
-//        return appFileName;
-//    }
 
     public String getLogsDir() {
         return logsDir;
@@ -54,15 +48,11 @@ public class RunnerContext {
         return this.baseDir +  File.separator + this.appDir;
     }
 
-    public File getAppFullPathFile(){
-        return new File(getAppFullPath());
-    }
 
     public static class Builder {
 
         protected String appDir;
         protected String baseDir;
-//        protected String appFileName;
         protected String logsDir;
         protected RuntimeAssertion runtimeAssertion;
         protected Log log;
@@ -76,11 +66,6 @@ public class RunnerContext {
             this.appDir = appDir;
             return this;
         }
-
-//        public RunnerContext.Builder appFileName(String appName){
-//            this.appFileName = appName;
-//            return this;
-//        }
 
         public RunnerContext.Builder logsDir(String logsDir){
             this.logsDir = logsDir;

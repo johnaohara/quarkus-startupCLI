@@ -1,6 +1,6 @@
 package io.quarkus.ts.startstop.utils;
 
-import io.quarkus.ts.startstop.RunnerContext;
+import io.quarkus.ts.startstop.context.RunnerContext;
 
 import java.io.File;
 import java.io.FileNotFoundException;

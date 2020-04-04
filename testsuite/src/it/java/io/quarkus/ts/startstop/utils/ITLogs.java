@@ -1,6 +1,6 @@
 package io.quarkus.ts.startstop.utils;
 
-import io.quarkus.ts.startstop.RunnerContext;
+import io.quarkus.ts.startstop.context.RunnerContext;
 import org.junit.jupiter.api.Assertions;
 
 import java.io.File;
@@ -55,8 +55,8 @@ public class ITLogs extends Logs {
     }
 
     @Override
-    public void checkLog(App app, MvnCmd cmd, File log, RunnerContext context) throws FileNotFoundException {
-        try (Scanner sc = new Scanner(log)) {
+    public void checkLog(App app, MvnCmd cmd, File logFile, RunnerContext context) throws FileNotFoundException {
+        try (Scanner sc = new Scanner(logFile)) {
             while (sc.hasNextLine()) {
                 String line = sc.nextLine();
                 boolean error = line.matches("(?i:.*ERROR.*)");
@@ -74,7 +74,7 @@ public class ITLogs extends Logs {
                 }
                 context.getRuntimeAssertion().assertFalse(error && !whiteListed, cmd.name() + " log should not contain `ERROR' lines that are not whitelisted. " +
                         "See testsuite" + File.separator + "target" + File.separator + "archived-logs" +
-                        File.separator + ((TestRunnerContext)context).getTestClass() + File.separator + ((TestRunnerContext)context).getTestMethod() + File.separator + log.getName());
+                        File.separator + ((TestRunnerContext)context).getTestClass() + File.separator + ((TestRunnerContext)context).getTestMethod() + File.separator + logFile.getName());
             }
         }
     }

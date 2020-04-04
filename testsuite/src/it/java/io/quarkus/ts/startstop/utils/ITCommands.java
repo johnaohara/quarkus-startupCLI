@@ -1,6 +1,11 @@
 package io.quarkus.ts.startstop.utils;
 
+import io.quarkus.ts.startstop.ArtifactGeneratorTest;
+import io.quarkus.ts.startstop.context.RunResult;
+import io.quarkus.ts.startstop.context.RunnerContext;
+
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -10,8 +15,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Logger;
 
 public class ITCommands extends Commands {
+
+    private static final Logger LOGGER = Logger.getLogger(ITCommands.class.getName());
 
     public static void confAppPropsForSkeleton(String appDir) throws IOException {
         // Config, see app-generated-skeleton/README.md

@@ -1,15 +1,16 @@
 package io.quarkus.ts.startstop;
 
+import io.quarkus.ts.startstop.context.RunnerContext;
 import io.quarkus.ts.startstop.utils.App;
 import io.quarkus.ts.startstop.utils.Commands;
 import io.quarkus.ts.startstop.utils.LogBuilder;
 import io.quarkus.ts.startstop.utils.Logs;
 import io.quarkus.ts.startstop.utils.MvnCmd;
+import io.quarkus.ts.startstop.utils.SingleExecutorService;
 import io.quarkus.ts.startstop.utils.WebpageTester;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
@@ -21,7 +22,7 @@ public class StartStopRunner {
     private static final Logger LOGGER = Logger.getLogger(StartStopRunner.class.getName());
 
     public static void testStartup(App app, RunnerContext runnerContext, MvnCmd mvnCmd) throws IOException, InterruptedException {
-        if (runnerContext.appDir == null){
+        if (runnerContext.getAppDir() == null){
             throw new IllegalArgumentException("App Directory has not been set");
         }
         if (mvnCmd == null){
@@ -36,19 +37,20 @@ public class StartStopRunner {
         try {
             // Cleanup
             Commands.cleanTarget(runnerContext);
-            Files.createDirectories(Paths.get(runnerContext.getLogsDir()));
+
+            //Initialise Dirs
+            Commands.createDirs(runnerContext.getLogsDir());
 
             // Build
             buildLogA = new File(runnerContext.getLogsDir() + File.separator + mvnCmd.name().toLowerCase() + "-build.log");
-            ExecutorService buildService = Executors.newFixedThreadPool(1);
-            buildService.submit(new Commands.ProcessRunner(appDir, buildLogA, Commands.getBuildCommand(mvnCmd.cmds()[0]), 20));
             long buildStarts = System.currentTimeMillis();
-            buildService.shutdown();
-            buildService.awaitTermination(30, TimeUnit.MINUTES);
+
+            SingleExecutorService.execute(runnerContext.getAppFullPath(), buildLogA, Commands.getBuildCommand(mvnCmd.cmds()[0]));
+
             long buildEnds = System.currentTimeMillis();
 
             assert(buildLogA.exists());
-            runnerContext.log.checkLog(app, mvnCmd, buildLogA, runnerContext);
+            runnerContext.getLog().checkLog(app, mvnCmd, buildLogA, runnerContext);
 
             // Run
             LOGGER.info("Running...");
@@ -84,18 +86,18 @@ public class StartStopRunner {
 
             LOGGER.info("Gonna wait for ports closed...");
             // Release ports
-            runnerContext.runtimeAssertion.assertTrue(Commands.waitForTcpClosed("localhost", Commands.parsePort(firstValidationUrl), 60),
+            runnerContext.getRuntimeAssertion().assertTrue(Commands.waitForTcpClosed("localhost", Commands.parsePort(firstValidationUrl), 60),
                     "Main port is still open");
             if(!Commands.waitForTcpClosed("localhost", Commands.parsePort(firstValidationUrl), 60)){
                 LOGGER.warning("Main port is still open");
             }
 
             //TODO:: split out IT test log checker and normal log checker
-            runnerContext.log.checkLog(app, mvnCmd, runLogA, runnerContext);
+            runnerContext.getLog().checkLog(app, mvnCmd, runLogA, runnerContext);
 
-            float[] startedStopped = runnerContext.log.parseStartStopTimestamps(runLogA);
+            float[] startedStopped = runnerContext.getLog().parseStartStopTimestamps(runLogA);
 
-            Path measurementsLog = Paths.get(runnerContext.log.getLogsDir(runnerContext).toString(), "measurements.csv");
+            Path measurementsLog = Paths.get(runnerContext.getLog().getLogsDir(runnerContext).toString(), "measurements.csv");
             LogBuilder.Log log = new LogBuilder()
                     .app(app)
                     .mode(mvnCmd)
@@ -106,9 +108,9 @@ public class StartStopRunner {
                     .rssKb(rssKb)
                     .openedFiles(openedFiles)
                     .build();
-            runnerContext.log.logMeasurements(log, measurementsLog);
+            runnerContext.getLog().logMeasurements(log, measurementsLog);
 
-            runnerContext.log.checkThreshold(app, mvnCmd, rssKb, timeToFirstOKRequest, Logs.SKIP, runnerContext);
+            runnerContext.getLog().checkThreshold(app, mvnCmd, rssKb, timeToFirstOKRequest, Logs.SKIP, runnerContext);
 
         } catch (Exception e){
             LOGGER.severe("Fatal error occured:");
@@ -120,8 +122,8 @@ public class StartStopRunner {
                 Commands.processStopper(pA, true);
             }
             // Archive logs no matter what
-            runnerContext.log.archiveLog(runnerContext, buildLogA);
-            runnerContext.log.archiveLog(runnerContext, runLogA);
+            runnerContext.getLog().archiveLog(runnerContext, buildLogA);
+            runnerContext.getLog().archiveLog(runnerContext, runLogA);
             Commands.cleanTarget(runnerContext);
         }
     }

@@ -1,5 +1,6 @@
 package io.quarkus.ts.startstop;
 
+import io.quarkus.ts.startstop.context.RunnerContext;
 import io.quarkus.ts.startstop.utils.App;
 import io.quarkus.ts.startstop.utils.Config;
 import io.quarkus.ts.startstop.utils.Logs;
