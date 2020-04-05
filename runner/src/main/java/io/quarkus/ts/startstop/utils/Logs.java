@@ -30,6 +30,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Logger;
@@ -67,27 +69,35 @@ public class Logs implements Log {
     private static final Pattern startedPatternControlSymbols = Pattern.compile(".* started in .*188m([0-9\\.]+).*", Pattern.DOTALL);
     private static final Pattern stoppedPatternControlSymbols = Pattern.compile(".* stopped in .*188m([0-9\\.]+).*", Pattern.DOTALL);
 
-    // TODO: How about WARNING? Other unwanted messages?
-    @Override
-    public void checkLog(App app, MvnCmd cmd, File log, RunnerContext context) throws FileNotFoundException {
+    private static final Pattern warnErrorDetectionPattern = Pattern.compile("(?i:.*(ERROR|WARN).*)");
+
+    public static final long SKIP = -1L;
+
+    public static void checkLog(String testClass, String testMethod, Apps app, MvnCmds cmd, File log) throws FileNotFoundException {
         try (Scanner sc = new Scanner(log)) {
+            Set<String> offendingLines = new HashSet<>();
             while (sc.hasNextLine()) {
                 String line = sc.nextLine();
-                boolean error = line.matches("(?i:.*ERROR.*)");
+                boolean error = warnErrorDetectionPattern.matcher(line).matches();
                 boolean whiteListed = false;
                 if (error) {
-                    if(app.getWhitelistLogLines() != null) {
-                        for (String w : app.getWhitelistLogLines()) {
-                            if (line.contains(w)) {
-                                whiteListed = true;
-                                LOGGER.info(cmd.name() + "log for " + app.getName() + " contains whitelisted error: `" + line + "'");
-                                break;
-                            }
+                    for (Pattern p : app.whitelistLogLines.errs) {
+                        if (p.matcher(line).matches()) {
+                            whiteListed = true;
+                            LOGGER.info(cmd.name() + "log for " + testMethod + " contains whitelisted error: `" + line + "'");
+                            break;
                         }
                     }
+                    if (!whiteListed) {
+                        offendingLines.add(line);
+                    }
                 }
-                context.getRuntimeAssertion().assertFalse(error && !whiteListed, cmd.name() + " log should not contain `ERROR' lines that are not whitelisted. ");
             }
+            context.getRuntimeAssertion().assertTrue(offendingLines.isEmpty(),
+                    cmd.name() + " log should not contain error or warning lines that are not whitelisted. " +
+                            "See testsuite" + File.separator + "target" + File.separator + "archived-logs" +
+                            File.separator + testClass + File.separator + testMethod + File.separator + log.getName() +
+                            " and check these offending lines: \n" + String.join("\n", offendingLines));
         }
     }
 
