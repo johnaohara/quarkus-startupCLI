@@ -6,7 +6,7 @@ import io.quarkus.ts.startstop.utils.Config;
 import io.quarkus.ts.startstop.utils.Logs;
 import io.quarkus.ts.startstop.utils.MvnCmd;
 import io.quarkus.ts.startstop.utils.RunnerMvnCmd;
-import io.quarkus.ts.startstop.utils.RunnerAssertions;
+import io.quarkus.ts.startstop.utils.CliAssertions;
 import org.aesh.AeshRuntimeRunner;
 import org.aesh.command.Command;
 import org.aesh.command.CommandDefinition;
@@ -61,7 +61,7 @@ public class StartStopCli {
                 RunnerContext runnerContext = RunnerContext.Builder.instance()
                         .logsDir(logDir)
                         .appDir(applicationSrcPath)
-                        .runtimeAssertion(new RunnerAssertions())
+                        .runtimeAssertion(new CliAssertions())
                         .log(Logs.instance())
                         .build();
 

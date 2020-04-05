@@ -34,7 +34,6 @@ import io.quarkus.ts.startstop.utils.ITMvnCmd;
 import io.quarkus.ts.startstop.utils.RunnerMvnCmd;
 import io.quarkus.ts.startstop.utils.SingleExecutorService;
 import io.quarkus.ts.startstop.utils.TestFlags;
-import io.quarkus.ts.startstop.utils.WebpageTester;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -44,9 +43,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 

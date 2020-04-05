@@ -19,9 +19,9 @@
  */
 package io.quarkus.ts.startstop.utils;
 
+import io.quarkus.ts.startstop.context.BuildResult;
 import io.quarkus.ts.startstop.context.RunResult;
 import io.quarkus.ts.startstop.context.RunnerContext;
-import io.quarkus.ts.startstop.context.BuildResult;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -43,8 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Scanner;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;

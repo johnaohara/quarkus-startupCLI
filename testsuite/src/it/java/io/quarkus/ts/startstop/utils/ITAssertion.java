@@ -1,20 +1,18 @@
 package io.quarkus.ts.startstop.utils;
 
-import org.junit.jupiter.api.Assertions;
-
-public class ITAssertion implements RuntimeAssertion {
+public class ITAssertion implements Assertions {
     @Override
     public void assertFalse(boolean condition, String message) {
-        Assertions.assertFalse(condition, message);
+        org.junit.jupiter.api.Assertions.assertFalse(condition, message);
     }
 
     @Override
     public void assertTrue(boolean condition, String message) {
-        Assertions.assertTrue(condition, message);
+        org.junit.jupiter.api.Assertions.assertTrue(condition, message);
     }
 
     @Override
     public void assertTrue(boolean condition) {
-        Assertions.assertTrue(condition);
+        org.junit.jupiter.api.Assertions.assertTrue(condition);
     }
 }

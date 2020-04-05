@@ -4,7 +4,7 @@ import io.quarkus.ts.startstop.StartStopRunner;
 
 import java.util.logging.Logger;
 
-public class RunnerAssertions implements RuntimeAssertion {
+public class CliAssertions implements Assertions {
     private static final Logger LOGGER = Logger.getLogger(StartStopRunner.class.getName());
 
     @Override

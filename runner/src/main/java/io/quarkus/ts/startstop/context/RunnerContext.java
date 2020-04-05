@@ -1,7 +1,7 @@
 package io.quarkus.ts.startstop.context;
 
 import io.quarkus.ts.startstop.utils.Log;
-import io.quarkus.ts.startstop.utils.RuntimeAssertion;
+import io.quarkus.ts.startstop.utils.Assertions;
 
 import java.io.File;
 
@@ -10,10 +10,10 @@ public class RunnerContext {
     protected final String appDir;
 
     protected final String logsDir;
-    protected final RuntimeAssertion runtimeAssertion;
+    protected final Assertions runtimeAssertion;
     protected final Log log;
 
-    protected RunnerContext(String appDir, String baseDir, String logsDir, RuntimeAssertion runtimeAssertion, Log log) {
+    protected RunnerContext(String appDir, String baseDir, String logsDir, Assertions runtimeAssertion, Log log) {
         this.appDir = appDir;
         this.baseDir = baseDir;
         this.logsDir = logsDir;
@@ -32,7 +32,7 @@ public class RunnerContext {
         return logsDir;
     }
 
-    public RuntimeAssertion getRuntimeAssertion() {
+    public Assertions getRuntimeAssertion() {
         return runtimeAssertion;
     }
 
@@ -54,7 +54,7 @@ public class RunnerContext {
         protected String appDir;
         protected String baseDir;
         protected String logsDir;
-        protected RuntimeAssertion runtimeAssertion;
+        protected Assertions runtimeAssertion;
         protected Log log;
 
 
@@ -72,7 +72,7 @@ public class RunnerContext {
             return this;
         }
 
-        public RunnerContext.Builder runtimeAssertion(RuntimeAssertion runtimeAssertion){
+        public RunnerContext.Builder runtimeAssertion(Assertions runtimeAssertion){
             this.runtimeAssertion = runtimeAssertion;
             return this;
         }

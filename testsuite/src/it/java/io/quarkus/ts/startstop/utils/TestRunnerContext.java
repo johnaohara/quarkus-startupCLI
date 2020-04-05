@@ -9,7 +9,7 @@ public class TestRunnerContext extends RunnerContext {
     private final String testClass;
     private final String testMethod;
 
-    protected TestRunnerContext(String appDir, String baseDir,  String logsDir, RuntimeAssertion runtimeAssertion, Log log, String testClass, String testMethod) {
+    protected TestRunnerContext(String appDir, String baseDir, String logsDir, Assertions runtimeAssertion, Log log, String testClass, String testMethod) {
         super(appDir, baseDir, logsDir, runtimeAssertion, log);
         this.testClass = testClass;
         this.testMethod = testMethod;

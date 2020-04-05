@@ -1,6 +1,6 @@
 package io.quarkus.ts.startstop.utils;
 
-public interface RuntimeAssertion {
+public interface Assertions {
 
     void assertFalse(boolean condition, String message);
 
