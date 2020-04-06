@@ -3,6 +3,7 @@ package io.quarkus.ts.startstop.utils;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 public class App {
     private String name;

@@ -30,10 +30,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -73,7 +73,7 @@ public class Logs implements Log {
 
     public static final long SKIP = -1L;
 
-    public static void checkLog(String testClass, String testMethod, Apps app, MvnCmds cmd, File log) throws FileNotFoundException {
+    public void checkLog(App app, MvnCmd cmd, File log, RunnerContext context) throws FileNotFoundException {
         try (Scanner sc = new Scanner(log)) {
             Set<String> offendingLines = new HashSet<>();
             while (sc.hasNextLine()) {
@@ -81,10 +81,11 @@ public class Logs implements Log {
                 boolean error = warnErrorDetectionPattern.matcher(line).matches();
                 boolean whiteListed = false;
                 if (error) {
-                    for (Pattern p : app.whitelistLogLines.errs) {
+                    for (String pattern : app.getWhitelistLogLines()) {
+                        Pattern p = Pattern.compile(".*".concat(pattern).concat(".*"));
                         if (p.matcher(line).matches()) {
                             whiteListed = true;
-                            LOGGER.info(cmd.name() + "log for " + testMethod + " contains whitelisted error: `" + line + "'");
+                            LOGGER.info(cmd.name() + "log for " + app.getName() + " contains whitelisted error: `" + line + "'");
                             break;
                         }
                     }
@@ -95,9 +96,7 @@ public class Logs implements Log {
             }
             context.getRuntimeAssertion().assertTrue(offendingLines.isEmpty(),
                     cmd.name() + " log should not contain error or warning lines that are not whitelisted. " +
-                            "See testsuite" + File.separator + "target" + File.separator + "archived-logs" +
-                            File.separator + testClass + File.separator + testMethod + File.separator + log.getName() +
-                            " and check these offending lines: \n" + String.join("\n", offendingLines));
+                            "Check these offending lines: \n" + String.join("\n", offendingLines));
         }
     }
 

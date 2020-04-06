@@ -7,6 +7,21 @@ whitelistLogLines:
   - The remote computer refused the network connection
   - maven-error-diagnostics
   - errorprone
+#// Harmless warning
+  - The Agroal dependency is present but no JDBC datasources have been defined
+#// Due to our not exactly accurate application.properties, these expected warnings occur...
+  - >
+      Unrecognized configuration key[ \\\\\"]*(
+      quarkus.oidc.auth-server-url|
+      quarkus.oidc.client-id|
+      quarkus.smallrye-jwt.enabled|
+      quarkus.jaeger.service-name|
+      quarkus.jaeger.sampler-param|
+      quarkus.jaeger.endpoint|
+      quarkus.jaeger.sampler-type
+      )[ \\\\\"]*was provided
+#// Hmm, weird, right? Deprecations should be fixed
+  - `io.vertx.reactivex.core.Vertx` is deprecated
 thresholds:
   linux.generated.dev.time.to.first.ok.request.threshold.ms: 50000
   linux.generated.dev.time.to.reload.threshold.ms: 20000
@@ -22,6 +37,8 @@ validationUrls:
 whitelistLogLines:
   - maven-error-diagnostics
   - errorprone
+# Needs fixing in the demo app?
+  - TestSecureController.java
 thresholds:
   linux.jvm.time.to.first.ok.request.threshold.ms: 2000
   linux.jvm.RSS.threshold.kB: 380000

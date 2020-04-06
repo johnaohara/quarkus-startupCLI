@@ -8,10 +8,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 public class ITLogs extends Logs {
 
@@ -57,25 +59,32 @@ public class ITLogs extends Logs {
     @Override
     public void checkLog(App app, MvnCmd cmd, File logFile, RunnerContext context) throws FileNotFoundException {
         try (Scanner sc = new Scanner(logFile)) {
+            Set<String> offendingLines = new HashSet<>();
             while (sc.hasNextLine()) {
                 String line = sc.nextLine();
                 boolean error = line.matches("(?i:.*ERROR.*)");
                 boolean whiteListed = false;
                 if (error) {
                     if(app.getWhitelistLogLines() != null) {
-                        for (String w : app.getWhitelistLogLines()) {
-                            if (line.contains(w)) {
+                        for (String pattern : app.getWhitelistLogLines()) {
+                            Pattern p = Pattern.compile(".*".concat(pattern).concat(".*"));
+                            if (p.matcher(line).matches()) {
                                 whiteListed = true;
                                 LOGGER.info(cmd.name() + "log for " + ((TestRunnerContext) context).getTestMethod() + " contains whitelisted error: `" + line + "'");
                                 break;
                             }
                         }
+                        if (!whiteListed) {
+                            offendingLines.add(line);
+                        }
                     }
                 }
-                context.getRuntimeAssertion().assertFalse(error && !whiteListed, cmd.name() + " log should not contain `ERROR' lines that are not whitelisted. " +
-                        "See testsuite" + File.separator + "target" + File.separator + "archived-logs" +
-                        File.separator + ((TestRunnerContext)context).getTestClass() + File.separator + ((TestRunnerContext)context).getTestMethod() + File.separator + logFile.getName());
-            }
+                context.getRuntimeAssertion().assertTrue(offendingLines.isEmpty(),
+                        cmd.name() + " log should not contain error or warning lines that are not whitelisted. " +
+                                "See testsuite" + File.separator + "target" + File.separator + "archived-logs" +
+                                File.separator + ((TestRunnerContext) context).getTestClass() + File.separator + ((TestRunnerContext) context).getTestMethod() +
+                                File.separator + logFile.getName() +
+                                " and check these offending lines: \n" + String.join("\n", offendingLines));            }
         }
     }
 }

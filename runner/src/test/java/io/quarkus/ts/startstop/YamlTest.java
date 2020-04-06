@@ -1,9 +1,12 @@
 package io.quarkus.ts.startstop;
 
 import io.quarkus.ts.startstop.utils.App;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
+
+import java.io.InputStream;
 
 public class YamlTest {
 
@@ -53,12 +56,36 @@ public class YamlTest {
         return yaml.load(yamlDoc);
     }
 
+    private App loadStreamAsApp(InputStream inputStream){
+        Yaml yaml = new Yaml(new Constructor(App.class));
+
+        return yaml.load(inputStream);
+
+    }
+
     private Object loadAsObject(String yamlDoc){
         Yaml yaml = new Yaml();
 
         System.out.println(yamlDoc);
 
         return yaml.load(yamlDoc);
+
+    }
+
+    @Test
+    public void testMultiLineWhitelistPattern(){
+
+        final String yaml_resource = "multiLinePattern.yaml";
+
+        InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(yaml_resource);
+
+        if ( inputStream != null) {
+            App yamlApp = loadStreamAsApp(inputStream);
+            System.out.println("");
+            System.out.println(yamlApp);
+        } else {
+            Assertions.fail("Failed to load resource: ".concat(yaml_resource));
+        }
 
     }
 }
