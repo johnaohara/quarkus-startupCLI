@@ -105,7 +105,7 @@ public class ArtifactGeneratorBOMTest {
             SingleExecutorService.execute(runnerContext.getBaseDir(), generateLog, generatorCmd);
 
             runnerContext.getRuntimeAssertion().assertTrue(generateLog.exists());
-            runnerContext.getLog().checkLog(app, ITMvnCmd.GENERATOR, generateLog, runnerContext);
+            runnerContext.getLogHandler().checkLog(app, ITMvnCmd.GENERATOR, generateLog, runnerContext);
 
             // Config, see app-generated-skeleton/README.md
             ITCommands.confAppPropsForSkeleton(runnerContext.getAppFullPath());
@@ -113,11 +113,12 @@ public class ArtifactGeneratorBOMTest {
 
             // Build
             BuildResult buildResult = ITCommands.buildProject(
-                    app,
-                    new File(logsDir + File.separator + "bom-artifact-build.log")
+                    app
+                    , new File(logsDir + File.separator + "bom-artifact-build.log")
+                    , runnerContext.getAppFullPath()
                     , runnerContext
-                    , ITMvnCmd.GENERATOR
-                    ,generatorCmd
+                    , RunnerMvnCmd.JVM
+                    , buildCmd
             );
 
             // Run
@@ -134,16 +135,16 @@ public class ArtifactGeneratorBOMTest {
 
             LOGGER.info("Terminating test and scanning logs...");
             runResult.getProcess().getInputStream().available();
-            runnerContext.getLog().checkLog(app, RunnerMvnCmd.JVM, runLogA, runnerContext);
+            runnerContext.getLogHandler().checkLog(app, RunnerMvnCmd.JVM, runResult.getLogFile(), runnerContext);
             ITCommands.processStopper(runResult.getProcess(), false);
             LOGGER.info("Gonna wait for ports closed after run...");
             // Release ports
             runnerContext.getRuntimeAssertion().assertTrue(ITCommands.waitForTcpClosed("localhost", ITCommands.parsePort(skeletonAppUrl), 60),
                     "Main port is still open after run");
 
-            runnerContext.getLog().checkLog(app, RunnerMvnCmd.JVM, runLogA, runnerContext);
+            runnerContext.getLogHandler().checkLog(app, RunnerMvnCmd.JVM, runResult.getLogFile(), runnerContext);
 
-            ((ITLogs)runnerContext.getLog()).checkJarSuffixes(flags, new File(runnerContext.getAppFullPath()));
+            ((ITLogs)runnerContext.getLogHandler()).checkJarSuffixes(flags, new File(runnerContext.getAppFullPath()));
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -155,12 +156,12 @@ public class ArtifactGeneratorBOMTest {
                 ITCommands.processStopper(runResult.getProcess(), true);
             }
             // Archive logs no matter what
-            runnerContext.getLog().archiveLog(runnerContext, generateLog);
+            runnerContext.getLogHandler().archiveLog(runnerContext, generateLog);
             if (buildLogA != null) {
-                runnerContext.getLog().archiveLog(runnerContext, buildLogA);
+                runnerContext.getLogHandler().archiveLog(runnerContext, buildLogA);
             }
             if (runLogA != null) {
-                runnerContext.getLog().archiveLog(runnerContext, runLogA);
+                runnerContext.getLogHandler().archiveLog(runnerContext, runLogA);
             }
             ITCommands.cleanDir(runnerContext.getAppFullPath(), logsDir);
         }

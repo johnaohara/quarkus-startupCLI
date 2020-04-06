@@ -47,7 +47,7 @@ public class StartStopRunner {
             long buildEnds = System.currentTimeMillis();
 
             assert(buildLogA.exists());
-            runnerContext.getLog().checkLog(app, mvnCmd, buildLogA, runnerContext);
+            runnerContext.getLogHandler().checkLog(app, mvnCmd, buildLogA, runnerContext);
 
             // Run
             LOGGER.info("Running...");
@@ -90,11 +90,11 @@ public class StartStopRunner {
             }
 
             //TODO:: split out IT test log checker and normal log checker
-            runnerContext.getLog().checkLog(app, mvnCmd, runLogA, runnerContext);
+            runnerContext.getLogHandler().checkLog(app, mvnCmd, runLogA, runnerContext);
 
-            float[] startedStopped = runnerContext.getLog().parseStartStopTimestamps(runLogA);
+            float[] startedStopped = runnerContext.getLogHandler().parseStartStopTimestamps(runLogA);
 
-            Path measurementsLog = Paths.get(runnerContext.getLog().getLogsDir(runnerContext).toString(), "measurements.csv");
+            Path measurementsLog = Paths.get(runnerContext.getLogHandler().getLogsDir(runnerContext).toString(), "measurements.csv");
             LogBuilder.Log log = new LogBuilder()
                     .app(app)
                     .mode(mvnCmd)
@@ -105,9 +105,9 @@ public class StartStopRunner {
                     .rssKb(rssKb)
                     .openedFiles(openedFiles)
                     .build();
-            runnerContext.getLog().logMeasurements(log, measurementsLog);
+            runnerContext.getLogHandler().logMeasurements(log, measurementsLog);
 
-            runnerContext.getLog().checkThreshold(app, mvnCmd, rssKb, timeToFirstOKRequest, Logs.SKIP, runnerContext);
+            runnerContext.getLogHandler().checkThreshold(app, mvnCmd, rssKb, timeToFirstOKRequest, Logs.SKIP, runnerContext);
 
         } catch (Exception e){
             LOGGER.severe("Fatal error occured:");
@@ -119,8 +119,8 @@ public class StartStopRunner {
                 Commands.processStopper(pA, true);
             }
             // Archive logs no matter what
-            runnerContext.getLog().archiveLog(runnerContext, buildLogA);
-            runnerContext.getLog().archiveLog(runnerContext, runLogA);
+            runnerContext.getLogHandler().archiveLog(runnerContext, buildLogA);
+            runnerContext.getLogHandler().archiveLog(runnerContext, runLogA);
             Commands.cleanTarget(runnerContext);
         }
     }

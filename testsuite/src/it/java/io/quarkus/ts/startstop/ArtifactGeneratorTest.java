@@ -33,6 +33,7 @@ import io.quarkus.ts.startstop.utils.ITMvnCmd;
 import io.quarkus.ts.startstop.utils.LogBuilder;
 import io.quarkus.ts.startstop.utils.RunnerMvnCmd;
 import io.quarkus.ts.startstop.utils.TestFlags;
+import io.quarkus.ts.startstop.utils.TestRunnerContext;
 import io.quarkus.ts.startstop.utils.WebpageTester;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -50,16 +51,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static io.quarkus.ts.startstop.utils.Commands.getArtifactGeneBaseDir;
-import static io.quarkus.ts.startstop.utils.ITCommands.cleanDir;
-import static io.quarkus.ts.startstop.utils.ITCommands.confAppPropsForSkeleton;
-import static io.quarkus.ts.startstop.utils.ITCommands.getGeneratorCommand;
-import static io.quarkus.ts.startstop.utils.ITCommands.getOpenedFDs;
-import static io.quarkus.ts.startstop.utils.ITCommands.getRSSkB;
-import static io.quarkus.ts.startstop.utils.ITCommands.getRunCommand;
-import static io.quarkus.ts.startstop.utils.ITCommands.parsePort;
-import static io.quarkus.ts.startstop.utils.ITCommands.processStopper;
-import static io.quarkus.ts.startstop.utils.ITCommands.waitForTcpClosed;
+
 import static io.quarkus.ts.startstop.utils.Logs.SKIP;
 
 /**
@@ -138,19 +130,17 @@ public class ArtifactGeneratorTest {
 
     public void testRuntime(TestInfo testInfo, String[] extensions, Set<TestFlags> flags) throws Exception {
 
-        File buildLogA = null;
-        File runLogA = null;
         String mn = testInfo.getTestMethod().get().getName();
 
         RunnerContext runnerContext = ITContext.testContext(Apps.GENERATED_SKELETON.dir
-                , getArtifactGeneBaseDir()
+                , ITCommands.getArtifactGeneBaseDir()
                 , testInfo.getTestClass().get().getCanonicalName()
                 , testInfo.getTestMethod().get().getName()
         );
 
         String logsDir = runnerContext.getAppFullPath() + "-logs";
 
-        List<String> generatorCmd = getGeneratorCommand(ITMvnCmd.GENERATOR.cmds[0], extensions);
+        List<String> generatorCmd = ITCommands.getGeneratorCommand(ITMvnCmd.GENERATOR.cmds[0], extensions);
         generatorCmd = generatorCmd.stream().map(cmd -> cmd.replaceAll("ARTIFACT_ID", Apps.GENERATED_SKELETON.dir)).collect(Collectors.toList());
 
         String skeletonAppUrl = apps.get(Apps.GENERATED_SKELETON.dir).validationUrls().keySet().stream().findFirst().get();
@@ -166,37 +156,43 @@ public class ArtifactGeneratorTest {
         App app = apps.get(Apps.GENERATED_SKELETON.dir);
 
         RunResult runResult = null;
+        BuildResult buildResult = null;
 
 
         try {
             // Cleanup
-            cleanDir(runnerContext.getAppDir(), logsDir);
+            ITCommands.cleanDir(runnerContext.getAppFullPath(), logsDir);
 
             //Initialise Dirs
             Commands.createDirs(logsDir);
 
             // Build
-            BuildResult buildResult = ITCommands.buildProject(
-                    app,
-                    new File(logsDir + File.separator + (flags.contains(TestFlags.WARM_UP) ? "warmup-artifact-build.log" : "artifact-build.log"))
+            buildResult = ITCommands.buildProject(
+                    app
+                    , new File(logsDir + File.separator + (flags.contains(TestFlags.WARM_UP) ? "warmup-artifact-build.log" : "artifact-build.log"))
+                    , runnerContext.getBaseDir()
                     , runnerContext
                     , ITMvnCmd.GENERATOR
-                    ,generatorCmd
+                    , generatorCmd
                     );
 
             // Config, see app-generated-skeleton/README.md
-            confAppPropsForSkeleton(runnerContext.getAppFullPath());
+            ITCommands.confAppPropsForSkeleton(runnerContext.getAppFullPath());
 
             runResult = ITCommands.runProject(
                     app
                     , new File(logsDir + File.separator + (flags.contains(TestFlags.WARM_UP) ? "warmup-dev-run.log" : "dev-run.log"))
                     , runnerContext
-                    , ITMvnCmd.GENERATOR
-                    , getRunCommand(RunnerMvnCmd.DEV.cmds[0])
+                    , RunnerMvnCmd.DEV
+                    , ITCommands.getRunCommand(RunnerMvnCmd.DEV.cmds[0])
                     , skeletonAppUrl
                     , flags.contains(TestFlags.WARM_UP)
             );
 
+            if (runResult == null){
+                LOGGER.info("Finishing warm up...");
+                return;
+            }
 
             LOGGER.info("Testing reload...");
 
@@ -214,20 +210,20 @@ public class ArtifactGeneratorTest {
             LOGGER.info("Terminate and scan logs...");
             runResult.getProcess().getInputStream().available();
 
-            long rssKb = getRSSkB(runResult.getProcess().pid());
-            long openedFiles = getOpenedFDs(runResult.getProcess().pid());
+            long rssKb = ITCommands.getRSSkB(runResult.getProcess().pid());
+            long openedFiles = ITCommands.getOpenedFDs(runResult.getProcess().pid());
 
-            processStopper(runResult.getProcess(), false);
+            ITCommands.processStopper(runResult.getProcess(), false);
 
             LOGGER.info("Gonna wait for ports closed...");
             // Release ports
-            runnerContext.getRuntimeAssertion().assertTrue(waitForTcpClosed("localhost", parsePort(skeletonAppUrl), 60),
+            runnerContext.getRuntimeAssertion().assertTrue(ITCommands.waitForTcpClosed("localhost", ITCommands.parsePort(skeletonAppUrl), 60),
                     "Main port is still open");
-            runnerContext.getLog().checkLog(apps.get(Apps.GENERATED_SKELETON.dir), ITMvnCmd.GENERATOR, runLogA, runnerContext);
+            runnerContext.getLogHandler().checkLog(apps.get(Apps.GENERATED_SKELETON.dir), ITMvnCmd.GENERATOR, runResult.getLogFile(), runnerContext);
 
-            float[] startedStopped = runnerContext.getLog().parseStartStopTimestamps(runLogA);
+            float[] startedStopped = runnerContext.getLogHandler().parseStartStopTimestamps(runResult.getLogFile());
 
-            Path measurementsLog = Paths.get(runnerContext.getLog().getLogsDir(runnerContext).toString(), "measurements.csv");
+            Path measurementsLog = Paths.get(((TestRunnerContext)runnerContext).getArchiveDir(), runnerContext.getLogHandler().getLogsDir(runnerContext).toString(), "measurements.csv");
             LogBuilder.Log log = new LogBuilder()
                     .app(apps.get(Apps.GENERATED_SKELETON.dir))
                     .mode(ITMvnCmd.GENERATOR)
@@ -239,8 +235,8 @@ public class ArtifactGeneratorTest {
                     .rssKb(rssKb)
                     .openedFiles(openedFiles)
                     .build();
-            runnerContext.getLog().logMeasurements(log, measurementsLog);
-            runnerContext.getLog().checkThreshold(apps.get(Apps.GENERATED_SKELETON.dir), ITMvnCmd.GENERATOR, SKIP, runResult.getTimeToFirstOKRequest(), timeToReloadedOKRequest, runnerContext);
+            runnerContext.getLogHandler().logMeasurements(log, measurementsLog);
+            runnerContext.getLogHandler().checkThreshold(apps.get(Apps.GENERATED_SKELETON.dir), ITMvnCmd.GENERATOR, SKIP, runResult.getTimeToFirstOKRequest(), timeToReloadedOKRequest, runnerContext);
 
         } finally {
             fakeOIDCServer.stop();
@@ -248,16 +244,18 @@ public class ArtifactGeneratorTest {
             if ( runResult != null) {
                 // Make sure processes are down even if there was an exception / failure
                 if (runResult.getProcess() != null) {
-                    processStopper(runResult.getProcess(), true);
+                    ITCommands.processStopper(runResult.getProcess(), true);
                 }
             }
             // Archive logs no matter what
-            runnerContext.getLog().archiveLog(runnerContext, buildLogA);
-            if (runLogA != null) {
-                // If build failed it is actually expected to have no runtime log.
-                runnerContext.getLog().archiveLog(runnerContext, runLogA);
+            if(buildResult != null) {
+                runnerContext.getLogHandler().archiveLog(runnerContext, buildResult.getBuildLog());
             }
-            cleanDir(runnerContext.getAppFullPath(), logsDir);
+            if (runResult != null && runResult.getLogFile() != null) {
+                // If build failed it is actually expected to have no runtime log.
+                runnerContext.getLogHandler().archiveLog(runnerContext, runResult.getLogFile());
+            }
+            ITCommands.cleanDir(runnerContext.getAppFullPath(), logsDir);
         }
     }
 

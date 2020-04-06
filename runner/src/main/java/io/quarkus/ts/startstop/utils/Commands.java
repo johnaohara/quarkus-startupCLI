@@ -162,11 +162,12 @@ public class Commands {
         }
     }
 
-    public static BuildResult buildProject(App app, File logFile, RunnerContext runnerContext, MvnCmd mvnCmd, List<String> cmd) throws FileNotFoundException, InterruptedException {
+    public static BuildResult buildProject(App app, File logFile, String targetDir, RunnerContext runnerContext, MvnCmd mvnCmd, List<String> cmd) throws FileNotFoundException, InterruptedException {
         BuildResult result = new BuildResult();
+        result.setBuildLog(logFile);
 
         try {
-            SingleExecutorService.execute(runnerContext.getBaseDir(), logFile, cmd);
+            SingleExecutorService.execute(targetDir, logFile, cmd);
         } catch (InterruptedException e) {
             //TODO:: handle interupted thread correctly
             e.printStackTrace();
@@ -176,7 +177,7 @@ public class Commands {
         result.setBuildEnds(System.currentTimeMillis());
 
         runnerContext.getRuntimeAssertion().assertTrue(logFile.exists());
-        runnerContext.getLog().checkLog(app, mvnCmd, logFile, runnerContext);
+        runnerContext.getLogHandler().checkLog(app, mvnCmd, logFile, runnerContext);
 
         return result;
     }
@@ -186,6 +187,7 @@ public class Commands {
         LOGGER.info("Running...");
 
         RunResult runResult = new RunResult();
+        runResult.setLogFile(runLog);
         // Run
         runResult.setProcess(runCommand(cmd, new File(runnerContext.getAppFullPath()), runLog));
 
@@ -199,13 +201,14 @@ public class Commands {
         if (warmUp) {
             LOGGER.info("Terminating warmup and scanning logs...");
             runResult.getProcess().getInputStream().available();
-            runnerContext.getLog().checkLog(app, mvnCmd, runLog, runnerContext);
+            runnerContext.getLogHandler().checkLog(app, mvnCmd, runLog, runnerContext);
             processStopper(runResult.getProcess(), false);
             LOGGER.info("Gonna wait for ports closed after warmup...");
             // Release ports
             runnerContext.getRuntimeAssertion().assertTrue(waitForTcpClosed("localhost", parsePort(skeletonAppUrl), 60),
                     "Main port is still open after warmup");
-            runnerContext.getLog().checkLog(app, mvnCmd, runLog, runnerContext);
+            runnerContext.getLogHandler().checkLog(app, mvnCmd, runLog, runnerContext);
+            return null;
         }
 
         return runResult;

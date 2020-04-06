@@ -44,7 +44,7 @@ import static io.quarkus.ts.startstop.utils.Commands.isThisWindows;
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
  */
-public class Logs implements Log {
+public class Logs implements LogHandler {
     private static final Logger LOGGER = Logger.getLogger(Logs.class.getName());
 
     private static final Pattern jarNamePattern = Pattern.compile("^((?!" + jarSuffix + ").)*jar$");
@@ -138,13 +138,19 @@ public class Logs implements Log {
         if (StringUtils.isBlank(runnerContext.getLogsDir())) {
             throw new IllegalArgumentException("Log dir must not be blank");
         }
-        Path destDir = getLogsDir(runnerContext);
+        Path destDir = getArchiveLogsDir(runnerContext);
 //        Path destDir = getLogsDir(runnerContext.getLogsDir());
-        Files.createDirectories(destDir);
+//        Files.createDirectories(destDir);
         String filename = log.getName();
         Files.copy(log.toPath(), Paths.get(destDir.toString(), filename));
     }
 
+    @Override
+    public Path getArchiveLogsDir(RunnerContext runnerContext) throws IOException {
+        Path destDir = new File(runnerContext.getArchiveDir()+File.separator +runnerContext.getLogsDir()).toPath();
+        Files.createDirectories(destDir);
+        return destDir;
+    }
     @Override
     public Path getLogsDir(RunnerContext runnerContext) throws IOException {
         Path destDir = new File(runnerContext.getLogsDir()).toPath();

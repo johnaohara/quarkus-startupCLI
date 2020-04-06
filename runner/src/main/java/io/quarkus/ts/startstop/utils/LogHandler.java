@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
-public interface Log {
+public interface LogHandler {
     String jarSuffix = "redhat";
     long SKIP = -1L;
 
@@ -18,6 +18,8 @@ public interface Log {
     void checkThreshold(App app, MvnCmd cmd, long rssKb, long timeToFirstOKRequest, long timeToReloadedOKRequest, RunnerContext context);
 
     void archiveLog(RunnerContext context, File log) throws IOException;
+
+    Path getArchiveLogsDir(RunnerContext context) throws IOException;
 
     Path getLogsDir(RunnerContext context) throws IOException;
 

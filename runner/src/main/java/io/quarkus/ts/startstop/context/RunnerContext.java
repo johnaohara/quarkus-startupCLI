@@ -1,6 +1,6 @@
 package io.quarkus.ts.startstop.context;
 
-import io.quarkus.ts.startstop.utils.Log;
+import io.quarkus.ts.startstop.utils.LogHandler;
 import io.quarkus.ts.startstop.utils.Assertions;
 
 import java.io.File;
@@ -10,15 +10,17 @@ public class RunnerContext {
     protected final String appDir;
 
     protected final String logsDir;
+    protected final String archiveDir;
     protected final Assertions runtimeAssertion;
-    protected final Log log;
+    protected final LogHandler logHandler;
 
-    protected RunnerContext(String appDir, String baseDir, String logsDir, Assertions runtimeAssertion, Log log) {
+    protected RunnerContext(String appDir, String baseDir, String logsDir, String archiveDir, Assertions runtimeAssertion, LogHandler logHandler) {
         this.appDir = appDir;
         this.baseDir = baseDir;
         this.logsDir = logsDir;
+        this.archiveDir = archiveDir;
         this.runtimeAssertion = runtimeAssertion;
-        this.log = log;
+        this.logHandler = logHandler;
     }
 
     public String getAppDir() {
@@ -32,12 +34,16 @@ public class RunnerContext {
         return logsDir;
     }
 
+    public String getArchiveDir() {
+        return archiveDir;
+    }
+
     public Assertions getRuntimeAssertion() {
         return runtimeAssertion;
     }
 
-    public Log getLog() {
-        return log;
+    public LogHandler getLogHandler() {
+        return logHandler;
     }
 
     public String getAppFullPath(){
@@ -54,8 +60,9 @@ public class RunnerContext {
         protected String appDir;
         protected String baseDir;
         protected String logsDir;
+        protected String archiveDir;
         protected Assertions runtimeAssertion;
-        protected Log log;
+        protected LogHandler logHandler;
 
 
         public static Builder instance(){
@@ -77,8 +84,8 @@ public class RunnerContext {
             return this;
         }
 
-        public RunnerContext.Builder log(Log log){
-            this.log = log;
+        public RunnerContext.Builder log(LogHandler log){
+            this.logHandler = log;
             return this;
         }
 
@@ -87,8 +94,13 @@ public class RunnerContext {
             return this;
         }
 
+        public RunnerContext.Builder archiveDir(String archiveDir) {
+            this.archiveDir = archiveDir;
+            return this;
+        }
+
         public RunnerContext build(){
-            return new RunnerContext(this.appDir, this.baseDir, logsDir, runtimeAssertion, log);
+            return new RunnerContext(this.appDir, this.baseDir, this.logsDir, this.archiveDir, this.runtimeAssertion, this.logHandler);
         }
 
 
