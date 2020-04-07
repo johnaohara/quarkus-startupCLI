@@ -118,9 +118,10 @@ public class StartStopRunner {
             if (pA != null) {
                 Commands.processStopper(pA, true);
             }
-            // Archive logs no matter what
-            runnerContext.getLogHandler().archiveLog(runnerContext, buildLogA);
-            runnerContext.getLogHandler().archiveLog(runnerContext, runLogA);
+            if(runnerContext.archiveLogs()) {
+                runnerContext.getLogHandler().archiveLog(runnerContext, buildLogA);
+                runnerContext.getLogHandler().archiveLog(runnerContext, runLogA);
+            }
             Commands.cleanTarget(runnerContext);
         }
     }

@@ -63,6 +63,7 @@ public class StartStopCli {
                         .appDir(applicationSrcPath)
                         .runtimeAssertion(new CliAssertions())
                         .log(Logs.instance())
+                        .archiveLogs(false)
                         .build();
 
                 startStopRunner.testStartup(app

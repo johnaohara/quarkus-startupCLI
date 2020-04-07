@@ -11,6 +11,7 @@ public class CliAssertions implements Assertions {
     public void assertFalse(boolean condition, String message) {
         if(condition){
             LOGGER.severe(message);
+            throw new RuntimeException("Run failed: ".concat(message));
         }
     }
 
@@ -23,6 +24,7 @@ public class CliAssertions implements Assertions {
     public void assertTrue(boolean condition) {
         if(!condition){
             LOGGER.severe("expected: <true> but was: <false>");
+            throw new RuntimeException("Run failed");
         }
     }
 }

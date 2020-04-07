@@ -9,8 +9,18 @@ public class TestRunnerContext extends RunnerContext {
     private final String testClass;
     private final String testMethod;
 
-    protected TestRunnerContext(String appDir, String baseDir, String logsDir, String archiveDir, Assertions runtimeAssertion, LogHandler log, String testClass, String testMethod) {
-        super(appDir, baseDir, logsDir, archiveDir, runtimeAssertion, log);
+    protected TestRunnerContext(String appDir
+            , String baseDir
+            , String logsDir
+            , String archiveDir
+            , Assertions runtimeAssertion
+            , LogHandler log
+            , String testClass
+            , String testMethod
+            , boolean archiveLogs
+    ) {
+
+        super(appDir, baseDir, logsDir, archiveDir, runtimeAssertion, log, archiveLogs);
         this.testClass = testClass;
         this.testMethod = testMethod;
     }
@@ -52,7 +62,16 @@ public class TestRunnerContext extends RunnerContext {
         }
 
         public TestRunnerContext build(){
-            return new TestRunnerContext(this.appDir, this.baseDir, this.logsDir, this.archiveDir, this.runtimeAssertion, this.logHandler, this.testClass, this.testMethod);
+            return new TestRunnerContext(this.appDir
+                    , this.baseDir
+                    , this.logsDir
+                    , this.archiveDir
+                    , this.runtimeAssertion
+                    , this.logHandler
+                    , this.testClass
+                    , this.testMethod
+                    , this.archiveLogs
+            );
         }
     }
 }

@@ -81,12 +81,14 @@ public class Logs implements LogHandler {
                 boolean error = warnErrorDetectionPattern.matcher(line).matches();
                 boolean whiteListed = false;
                 if (error) {
-                    for (String pattern : app.getWhitelistLogLines()) {
-                        Pattern p = Pattern.compile(".*".concat(pattern).concat(".*"));
-                        if (p.matcher(line).matches()) {
-                            whiteListed = true;
-                            LOGGER.info(cmd.name() + "log for " + app.getName() + " contains whitelisted error: `" + line + "'");
-                            break;
+                    if( app != null && app.getWhitelistLogLines() != null) {
+                        for (String pattern : app.getWhitelistLogLines()) {
+                            Pattern p = Pattern.compile(".*".concat(pattern).concat(".*"));
+                            if (p.matcher(line).matches()) {
+                                whiteListed = true;
+                                LOGGER.info(cmd.name() + "log for " + app.getName() + " contains whitelisted error: `" + line + "'");
+                                break;
+                            }
                         }
                     }
                     if (!whiteListed) {

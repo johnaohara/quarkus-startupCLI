@@ -14,18 +14,29 @@ public class RunnerContext {
     protected final Assertions runtimeAssertion;
     protected final LogHandler logHandler;
 
-    protected RunnerContext(String appDir, String baseDir, String logsDir, String archiveDir, Assertions runtimeAssertion, LogHandler logHandler) {
+    protected final boolean archiveLogs;
+
+    protected RunnerContext(String appDir
+            , String baseDir
+            , String logsDir
+            , String archiveDir
+            , Assertions runtimeAssertion
+            , LogHandler logHandler
+            , boolean archiveLogs) {
+
         this.appDir = appDir;
         this.baseDir = baseDir;
         this.logsDir = logsDir;
         this.archiveDir = archiveDir;
         this.runtimeAssertion = runtimeAssertion;
         this.logHandler = logHandler;
+        this.archiveLogs = archiveLogs;
     }
 
     public String getAppDir() {
         return this.appDir;
     }
+
     public String getBaseDir() {
         return this.baseDir;
     }
@@ -46,12 +57,16 @@ public class RunnerContext {
         return logHandler;
     }
 
-    public String getAppFullPath(){
+    public String getAppFullPath() {
         //TODO:: what scenarios do we have a null base dir?
-        if ( this.baseDir == null){
+        if (this.baseDir == null) {
             return this.appDir;
         }
-        return this.baseDir +  File.separator + this.appDir;
+        return this.baseDir + File.separator + this.appDir;
+    }
+
+    public boolean archiveLogs() {
+        return this.archiveLogs;
     }
 
 
@@ -63,28 +78,28 @@ public class RunnerContext {
         protected String archiveDir;
         protected Assertions runtimeAssertion;
         protected LogHandler logHandler;
+        protected boolean archiveLogs;
 
-
-        public static Builder instance(){
+        public static Builder instance() {
             return new Builder();
         }
 
-        public RunnerContext.Builder appDir(String appDir){
+        public RunnerContext.Builder appDir(String appDir) {
             this.appDir = appDir;
             return this;
         }
 
-        public RunnerContext.Builder logsDir(String logsDir){
+        public RunnerContext.Builder logsDir(String logsDir) {
             this.logsDir = logsDir;
             return this;
         }
 
-        public RunnerContext.Builder runtimeAssertion(Assertions runtimeAssertion){
+        public RunnerContext.Builder runtimeAssertion(Assertions runtimeAssertion) {
             this.runtimeAssertion = runtimeAssertion;
             return this;
         }
 
-        public RunnerContext.Builder log(LogHandler log){
+        public RunnerContext.Builder log(LogHandler log) {
             this.logHandler = log;
             return this;
         }
@@ -99,8 +114,13 @@ public class RunnerContext {
             return this;
         }
 
-        public RunnerContext build(){
-            return new RunnerContext(this.appDir, this.baseDir, this.logsDir, this.archiveDir, this.runtimeAssertion, this.logHandler);
+        public RunnerContext.Builder archiveLogs(boolean archiveLogs) {
+            this.archiveLogs = archiveLogs;
+            return this;
+        }
+
+        public RunnerContext build() {
+            return new RunnerContext(this.appDir, this.baseDir, this.logsDir, this.archiveDir, this.runtimeAssertion, this.logHandler, this.archiveLogs);
         }
 
 

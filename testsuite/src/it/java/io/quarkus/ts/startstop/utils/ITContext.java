@@ -17,6 +17,8 @@ public class ITContext {
         builder.testMethod(mn);
         builder.runtimeAssertion(new ITAssertion());
         builder.log(new ITLogs());
+        // Archive logs no matter what
+        builder.archiveLogs(true);
 
         return builder.build();
 
