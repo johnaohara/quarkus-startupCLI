@@ -21,13 +21,13 @@ package io.quarkus.ts.startstop.utils;
 
 import io.quarkus.ts.startstop.context.RunnerContext;
 import org.apache.commons.lang3.StringUtils;
+import org.jboss.logging.Logger;
 
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
-import java.util.logging.Logger;
 
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
@@ -53,6 +53,9 @@ public class WebpageTester {
             throw new IllegalArgumentException("stringToLookFor must contain a non-empty string");
         }
         String webPage = "";
+        String failureMessage = "Timeout " + timeoutS + "s was reached. " +
+                (StringUtils.isNotBlank(webPage) ? webPage + " must contain string: " : "Empty webpage does not contain string: ") +
+                "`" + stringToLookFor + "'";
         long now = System.currentTimeMillis();
         final long startTime = now;
         boolean found = false;
@@ -65,7 +68,7 @@ public class WebpageTester {
                 scanner.useDelimiter("\\A");
                 webPage = scanner.hasNext() ? scanner.next() : "";
             } catch (Exception e) {
-                LOGGER.fine("Waiting `" + stringToLookFor + "' to appear on " + url);
+                LOGGER.debug("Waiting `" + stringToLookFor + "' to appear on " + url);
             }
             if (webPage.contains(stringToLookFor)) {
                 found = true;
@@ -80,6 +83,9 @@ public class WebpageTester {
                 Thread.sleep(0, 100000);
             }
             now = System.currentTimeMillis();
+        }
+        if (!found) {
+            LOGGER.info(failureMessage);
         }
         context.getRuntimeAssertion().assertTrue(found, webPage + " must contain string: `" + stringToLookFor + "'");
         return foundTimestamp - startTime;

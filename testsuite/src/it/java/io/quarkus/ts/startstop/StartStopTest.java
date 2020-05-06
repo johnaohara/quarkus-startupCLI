@@ -25,12 +25,14 @@ import io.quarkus.ts.startstop.utils.Config;
 import io.quarkus.ts.startstop.utils.Environment;
 import io.quarkus.ts.startstop.utils.ITContext;
 import io.quarkus.ts.startstop.utils.RunnerMvnCmd;
+import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
-import java.util.logging.Logger;
+
+
 
 /**
  * @author Michal Karm Babacek <karm@redhat.com>

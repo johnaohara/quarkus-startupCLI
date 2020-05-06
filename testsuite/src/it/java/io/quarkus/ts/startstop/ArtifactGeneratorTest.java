@@ -31,10 +31,12 @@ import io.quarkus.ts.startstop.utils.ITCommands;
 import io.quarkus.ts.startstop.utils.ITContext;
 import io.quarkus.ts.startstop.utils.ITMvnCmd;
 import io.quarkus.ts.startstop.utils.LogBuilder;
+import io.quarkus.ts.startstop.utils.LogHandler;
 import io.quarkus.ts.startstop.utils.RunnerMvnCmd;
 import io.quarkus.ts.startstop.utils.TestFlags;
-import io.quarkus.ts.startstop.utils.TestRunnerContext;
+import io.quarkus.ts.startstop.context.TestRunnerContext;
 import io.quarkus.ts.startstop.utils.WebpageTester;
+import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -43,16 +45,17 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
 import static io.quarkus.ts.startstop.utils.Logs.SKIP;
+
 
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
@@ -64,7 +67,7 @@ public class ArtifactGeneratorTest {
 
     private static final Logger LOGGER = Logger.getLogger(ArtifactGeneratorTest.class.getName());
 
-    public static final String[] supportedExtensionsSetA = new String[]{
+    public static final String[] supportedExtensionsSubsetSetA = new String[]{
             "agroal",
             "config-yaml",
             "core",
@@ -81,7 +84,7 @@ public class ArtifactGeneratorTest {
             "logging-json",
             "narayana-jta",
             "oidc",
-            "quartz",
+            "quarkus-quartz", // "quartz" is ambiguous with org.apache.camel.quarkus:camel-quarkus-quartz
             "reactive-pg-client",
             "rest-client",
             "resteasy",
@@ -101,7 +104,7 @@ public class ArtifactGeneratorTest {
             "vertx-web",
     };
 
-    public static final String[] supportedExtensionsSetB = new String[]{
+    public static final String[] supportedExtensionsSubsetSetB = new String[]{
             "agroal",
             "config-yaml",
             "core",
@@ -131,26 +134,29 @@ public class ArtifactGeneratorTest {
     public void testRuntime(TestInfo testInfo, String[] extensions, Set<TestFlags> flags) throws Exception {
 
         String mn = testInfo.getTestMethod().get().getName();
+        String cn = testInfo.getTestClass().get().getCanonicalName();
 
         RunnerContext runnerContext = ITContext.testContext(Apps.GENERATED_SKELETON.dir
                 , ITCommands.getArtifactGeneBaseDir()
-                , testInfo.getTestClass().get().getCanonicalName()
-                , testInfo.getTestMethod().get().getName()
+                , cn
+                , mn
         );
 
-        String logsDir = runnerContext.getAppFullPath() + "-logs";
+        LogHandler logHandler = runnerContext.getLogHandler();
 
+        String logsDir = runnerContext.getAppFullPath() + "-logs";
+        StringBuilder whatIDidReport = new StringBuilder();
         List<String> generatorCmd = ITCommands.getGeneratorCommand(ITMvnCmd.GENERATOR.cmds[0], extensions);
         generatorCmd = generatorCmd.stream().map(cmd -> cmd.replaceAll("ARTIFACT_ID", Apps.GENERATED_SKELETON.dir)).collect(Collectors.toList());
 
         String skeletonAppUrl = apps.get(Apps.GENERATED_SKELETON.dir).validationUrls().keySet().stream().findFirst().get();
+
 
         if (flags.contains(TestFlags.WARM_UP)) {
             LOGGER.info(mn + ": Warming up setup: " + String.join(" ", generatorCmd));
         } else {
             LOGGER.info(mn + ": Testing setup: " + String.join(" ", generatorCmd));
         }
-
         FakeOIDCServer fakeOIDCServer = new FakeOIDCServer(6661, "localhost");
 
         App app = apps.get(Apps.GENERATED_SKELETON.dir);
@@ -161,12 +167,18 @@ public class ArtifactGeneratorTest {
 
         try {
             // Cleanup
-            ITCommands.cleanDir(runnerContext.getAppFullPath(), logsDir);
+            ITCommands.cleanDirOrFile(runnerContext.getAppFullPath(), logsDir);
 
             //Initialise Dirs
             Commands.createDirs(logsDir);
+            Files.createDirectories(Paths.get(logsDir));
 
             // Build
+            logHandler.appendln(whatIDidReport, "# " + cn + ", " + mn + ", warmup run: " + flags.contains(TestFlags.WARM_UP));
+            logHandler.appendln(whatIDidReport, (new Date()).toString());
+            logHandler.appendln(whatIDidReport, runnerContext.getAppFullPath());
+            logHandler.appendlnSection(whatIDidReport, String.join(" ", generatorCmd));
+            long buildStarts = System.currentTimeMillis();
             buildResult = ITCommands.buildProject(
                     app
                     , new File(logsDir + File.separator + (flags.contains(TestFlags.WARM_UP) ? "warmup-artifact-build.log" : "artifact-build.log"))
@@ -175,22 +187,31 @@ public class ArtifactGeneratorTest {
                     , ITMvnCmd.GENERATOR
                     , generatorCmd
                     );
+            long buildEnds = System.currentTimeMillis();
 
             // Config, see app-generated-skeleton/README.md
-            ITCommands.confAppPropsForSkeleton(runnerContext.getAppFullPath());
+            String appFullPath = runnerContext.getAppFullPath();
+            ITCommands.confAppPropsForSkeleton(appFullPath);
+
+            // Run
+            List<String> runCmd = ITCommands.getRunCommand(RunnerMvnCmd.DEV.cmds[0]);
 
             runResult = ITCommands.runProject(
                     app
                     , new File(logsDir + File.separator + (flags.contains(TestFlags.WARM_UP) ? "warmup-dev-run.log" : "dev-run.log"))
                     , runnerContext
                     , RunnerMvnCmd.DEV
-                    , ITCommands.getRunCommand(RunnerMvnCmd.DEV.cmds[0])
+                    , runCmd
                     , skeletonAppUrl
                     , flags.contains(TestFlags.WARM_UP)
             );
 
+            logHandler.appendln(whatIDidReport, appFullPath);
+            logHandler.appendlnSection(whatIDidReport, String.join(" ", runCmd));
+
             if (runResult == null){
                 LOGGER.info("Finishing warm up...");
+
                 return;
             }
 
@@ -198,6 +219,7 @@ public class ArtifactGeneratorTest {
 
             Path srcFile = Paths.get(runnerContext.getAppFullPath() + File.separator + "src" + File.separator + "main" + File.separator + "java" + File.separator +
                     "org" + File.separator + "my" + File.separator + "group" + File.separator + "MyResource.java");
+            logHandler.appendlnSection(whatIDidReport, "Reloading class: " + srcFile.toAbsolutePath());
             try (Stream<String> src = Files.lines(srcFile)) {
                 Files.write(srcFile, src.map(l -> l.replaceAll("hello", "bye")).collect(Collectors.toList()));
             }
@@ -235,7 +257,9 @@ public class ArtifactGeneratorTest {
                     .rssKb(rssKb)
                     .openedFiles(openedFiles)
                     .build();
-            runnerContext.getLogHandler().logMeasurements(log, measurementsLog);
+            logHandler.logMeasurements(log, measurementsLog);
+            logHandler.appendln(whatIDidReport, "Measurements:");
+            logHandler.appendln(whatIDidReport, log.headerMarkdown + "\n" + log.lineMarkdown);
             runnerContext.getLogHandler().checkThreshold(apps.get(Apps.GENERATED_SKELETON.dir), ITMvnCmd.GENERATOR, SKIP, runResult.getTimeToFirstOKRequest(), timeToReloadedOKRequest, runnerContext);
 
         } finally {
@@ -255,19 +279,20 @@ public class ArtifactGeneratorTest {
                 // If build failed it is actually expected to have no runtime log.
                 runnerContext.getLogHandler().archiveLog(runnerContext, runResult.getLogFile());
             }
-            ITCommands.cleanDir(runnerContext.getAppFullPath(), logsDir);
+            ITCommands.cleanDirOrFile(runnerContext.getAppFullPath(), logsDir);
+            logHandler.writeReport(runnerContext, whatIDidReport.toString());
         }
     }
 
     @Test
     public void manyExtensionsSetA(TestInfo testInfo) throws Exception {
-        testRuntime(testInfo, supportedExtensionsSetA, EnumSet.of(TestFlags.WARM_UP));
-        testRuntime(testInfo, supportedExtensionsSetA, EnumSet.noneOf(TestFlags.class));
+        testRuntime(testInfo, supportedExtensionsSubsetSetA, EnumSet.of(TestFlags.WARM_UP));
+        testRuntime(testInfo, supportedExtensionsSubsetSetA, EnumSet.noneOf(TestFlags.class));
     }
 
     @Test
     public void manyExtensionsSetB(TestInfo testInfo) throws Exception {
-        testRuntime(testInfo, supportedExtensionsSetB, EnumSet.of(TestFlags.WARM_UP));
-        testRuntime(testInfo, supportedExtensionsSetB, EnumSet.noneOf(TestFlags.class));
+        testRuntime(testInfo, supportedExtensionsSubsetSetB, EnumSet.of(TestFlags.WARM_UP));
+        testRuntime(testInfo, supportedExtensionsSubsetSetB, EnumSet.noneOf(TestFlags.class));
     }
 }

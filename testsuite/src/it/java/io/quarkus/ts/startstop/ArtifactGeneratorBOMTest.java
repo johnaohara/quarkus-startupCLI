@@ -31,25 +31,28 @@ import io.quarkus.ts.startstop.utils.ITCommands;
 import io.quarkus.ts.startstop.utils.ITContext;
 import io.quarkus.ts.startstop.utils.ITLogs;
 import io.quarkus.ts.startstop.utils.ITMvnCmd;
+import io.quarkus.ts.startstop.utils.LogHandler;
 import io.quarkus.ts.startstop.utils.RunnerMvnCmd;
 import io.quarkus.ts.startstop.utils.SingleExecutorService;
 import io.quarkus.ts.startstop.utils.TestFlags;
+import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import java.io.File;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import static io.quarkus.ts.startstop.ArtifactGeneratorTest.supportedExtensionsSetA;
-import static io.quarkus.ts.startstop.ArtifactGeneratorTest.supportedExtensionsSetB;
+import static io.quarkus.ts.startstop.ArtifactGeneratorTest.supportedExtensionsSubsetSetA;
+import static io.quarkus.ts.startstop.ArtifactGeneratorTest.supportedExtensionsSubsetSetB;
 import static io.quarkus.ts.startstop.utils.Commands.getArtifactGeneBaseDir;
 import static io.quarkus.ts.startstop.utils.Commands.getRunCommand;
+
 
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
@@ -65,14 +68,19 @@ public class ArtifactGeneratorBOMTest {
         File generateLog = null;
         File buildLogA = null;
         File runLogA = null;
+
         String repoDir = ITCommands.getLocalMavenRepoDir();
+        StringBuilder whatIDidReport = new StringBuilder();
+        String cn = testInfo.getTestClass().get().getCanonicalName();
         String mn = testInfo.getTestMethod().get().getName();
 
         RunnerContext runnerContext = ITContext.testContext(Apps.GENERATED_SKELETON.dir
                 , getArtifactGeneBaseDir()
-                , testInfo.getTestClass().get().getCanonicalName()
-                , testInfo.getTestMethod().get().getName()
+                , cn
+                , mn
         );
+
+        LogHandler logHandler = runnerContext.getLogHandler();
 
         String logsDir = runnerContext.getAppFullPath() + "-logs";
 
@@ -93,7 +101,7 @@ public class ArtifactGeneratorBOMTest {
 
         try {
             // Cleanup
-            Commands.cleanDir(runnerContext.getAppFullPath(), logsDir);
+            Commands.cleanDirOrFile(runnerContext.getAppFullPath(), logsDir);
 
             //Initialise Dirs
             Commands.createDirs(logsDir, repoDir);
@@ -103,15 +111,20 @@ public class ArtifactGeneratorBOMTest {
             generateLog = new File(logsDir + File.separator + "bom-artifact-generator.log");
 
             SingleExecutorService.execute(runnerContext.getBaseDir(), generateLog, generatorCmd);
+            logHandler.appendln(whatIDidReport, "# " + cn + ", " + mn);
+            logHandler.appendln(whatIDidReport, (new Date()).toString());
+            logHandler.appendln(whatIDidReport, runnerContext.getBaseDir());
+            logHandler.appendlnSection(whatIDidReport, String.join(" ", generatorCmd));
 
             runnerContext.getRuntimeAssertion().assertTrue(generateLog.exists());
-            runnerContext.getLogHandler().checkLog(app, ITMvnCmd.GENERATOR, generateLog, runnerContext);
+            logHandler.checkLog(app, ITMvnCmd.GENERATOR, generateLog, runnerContext);
 
             // Config, see app-generated-skeleton/README.md
             ITCommands.confAppPropsForSkeleton(runnerContext.getAppFullPath());
 
 
             // Build
+            LOGGER.info(mn + ": Build command " + String.join(" ", buildCmd));
             BuildResult buildResult = ITCommands.buildProject(
                     app
                     , new File(logsDir + File.separator + "bom-artifact-build.log")
@@ -120,6 +133,8 @@ public class ArtifactGeneratorBOMTest {
                     , RunnerMvnCmd.JVM
                     , buildCmd
             );
+            logHandler.appendln(whatIDidReport, runnerContext.getAppFullPath());
+            logHandler.appendlnSection(whatIDidReport, String.join(" ", buildCmd));
 
             // Run
             LOGGER.info(mn + ": Run command " + String.join(" ", RunnerMvnCmd.JVM.cmds[1]));
@@ -132,19 +147,25 @@ public class ArtifactGeneratorBOMTest {
                     , skeletonAppUrl
                     , flags.contains(TestFlags.WARM_UP)
             );
+//            TODO:: FIX THIS
+//            logHandler.appendln(whatIDidReport, appDir.getAbsolutePath());
+            logHandler.appendlnSection(whatIDidReport, String.join(" ", runCmd));
+            // Test web pages
+//            WebpageTester.testWeb(skeletonApp.urlContent[0][0], 20,
+//                    skeletonApp.urlContent[0][1], false);
 
             LOGGER.info("Terminating test and scanning logs...");
             runResult.getProcess().getInputStream().available();
-            runnerContext.getLogHandler().checkLog(app, RunnerMvnCmd.JVM, runResult.getLogFile(), runnerContext);
+            logHandler.checkLog(app, RunnerMvnCmd.JVM, runResult.getLogFile(), runnerContext);
             ITCommands.processStopper(runResult.getProcess(), false);
             LOGGER.info("Gonna wait for ports closed after run...");
             // Release ports
             runnerContext.getRuntimeAssertion().assertTrue(ITCommands.waitForTcpClosed("localhost", ITCommands.parsePort(skeletonAppUrl), 60),
                     "Main port is still open after run");
 
-            runnerContext.getLogHandler().checkLog(app, RunnerMvnCmd.JVM, runResult.getLogFile(), runnerContext);
+            logHandler.checkLog(app, RunnerMvnCmd.JVM, runResult.getLogFile(), runnerContext);
 
-            ((ITLogs)runnerContext.getLogHandler()).checkJarSuffixes(flags, new File(runnerContext.getAppFullPath()));
+            ((ITLogs)logHandler).checkJarSuffixes(flags, new File(runnerContext.getAppFullPath()));
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -156,64 +177,63 @@ public class ArtifactGeneratorBOMTest {
                 ITCommands.processStopper(runResult.getProcess(), true);
             }
             // Archive logs no matter what
-            runnerContext.getLogHandler().archiveLog(runnerContext, generateLog);
+            logHandler.archiveLog(runnerContext, generateLog);
             if (buildLogA != null) {
-                runnerContext.getLogHandler().archiveLog(runnerContext, buildLogA);
+                logHandler.archiveLog(runnerContext, buildLogA);
             }
             if (runLogA != null) {
-                runnerContext.getLogHandler().archiveLog(runnerContext, runLogA);
+                logHandler.archiveLog(runnerContext, runLogA);
             }
-            ITCommands.cleanDir(runnerContext.getAppFullPath(), logsDir);
+            ITCommands.cleanDirOrFile(runnerContext.getAppFullPath(), logsDir);
+            logHandler.writeReport(runnerContext, whatIDidReport.toString());
         }
     }
 
     @Test
     @Tag("community")
     public void quarkusBomExtensionsA(TestInfo testInfo) throws Exception {
-        testRuntime(testInfo, supportedExtensionsSetA, EnumSet.of(TestFlags.QUARKUS_BOM));
+        testRuntime(testInfo, supportedExtensionsSubsetSetA, EnumSet.of(TestFlags.QUARKUS_BOM));
     }
 
     @Test
     @Tag("community")
     public void quarkusBomExtensionsB(TestInfo testInfo) throws Exception {
-        testRuntime(testInfo, supportedExtensionsSetB, EnumSet.of(TestFlags.QUARKUS_BOM));
+        testRuntime(testInfo, supportedExtensionsSubsetSetB, EnumSet.of(TestFlags.QUARKUS_BOM));
     }
 
     @Test
     @Tag("product")
     public void quarkusProductBomExtensionsA(TestInfo testInfo) throws Exception {
-        testRuntime(testInfo, supportedExtensionsSetA, EnumSet.of(TestFlags.PRODUCT_BOM));
+        testRuntime(testInfo, supportedExtensionsSubsetSetA, EnumSet.of(TestFlags.PRODUCT_BOM));
     }
 
     @Test
     @Tag("product")
     public void quarkusProductBomExtensionsB(TestInfo testInfo) throws Exception {
-        testRuntime(testInfo, supportedExtensionsSetB, EnumSet.of(TestFlags.PRODUCT_BOM));
+        testRuntime(testInfo, supportedExtensionsSubsetSetB, EnumSet.of(TestFlags.PRODUCT_BOM));
     }
 
     @Test
     @Tag("community")
     public void quarkusUniverseBomExtensionsA(TestInfo testInfo) throws Exception {
-        testRuntime(testInfo, supportedExtensionsSetA, EnumSet.of(TestFlags.UNIVERSE_BOM));
+        testRuntime(testInfo, supportedExtensionsSubsetSetA, EnumSet.of(TestFlags.UNIVERSE_BOM));
     }
 
     @Test
     @Tag("community")
     public void quarkusUniverseBomExtensionsB(TestInfo testInfo) throws Exception {
-        testRuntime(testInfo, supportedExtensionsSetB, EnumSet.of(TestFlags.UNIVERSE_BOM));
+        testRuntime(testInfo, supportedExtensionsSubsetSetB, EnumSet.of(TestFlags.UNIVERSE_BOM));
     }
 
     @Test
     @Tag("product")
     public void quarkusUniverseProductBomExtensionsA(TestInfo testInfo) throws Exception {
-
-
-        testRuntime(testInfo, supportedExtensionsSetA, EnumSet.of(TestFlags.UNIVERSE_PRODUCT_BOM));
+        testRuntime(testInfo, supportedExtensionsSubsetSetA, EnumSet.of(TestFlags.UNIVERSE_PRODUCT_BOM));
     }
 
     @Test
     @Tag("product")
     public void quarkusUniverseProductBomExtensionsB(TestInfo testInfo) throws Exception {
-        testRuntime(testInfo, supportedExtensionsSetB, EnumSet.of(TestFlags.UNIVERSE_PRODUCT_BOM));
+        testRuntime(testInfo, supportedExtensionsSubsetSetB, EnumSet.of(TestFlags.UNIVERSE_PRODUCT_BOM));
     }
 }

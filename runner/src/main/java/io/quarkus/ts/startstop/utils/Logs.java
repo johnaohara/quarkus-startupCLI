@@ -20,12 +20,13 @@
 package io.quarkus.ts.startstop.utils;
 
 import io.quarkus.ts.startstop.context.RunnerContext;
+import io.quarkus.ts.startstop.context.TestRunnerContext;
 import org.apache.commons.lang3.StringUtils;
+import org.jboss.logging.Logger;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -34,12 +35,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static io.quarkus.ts.startstop.utils.Commands.isThisWindows;
+
 
 /**
  * @author Michal Karm Babacek <karm@redhat.com>
@@ -127,14 +130,14 @@ public class Logs implements LogHandler {
                             + " ms to get the first OK request, which is over " +
                             threshold + " ms threshold.");
         } else {
-            LOGGER.warning("Missing threshold definition: " + proptery);
+            LOGGER.warn("Missing threshold definition: " + proptery);
         }
     }
 
     @Override
     public void archiveLog(RunnerContext runnerContext, File log) throws IOException {
         if (log == null || !log.exists()) {
-            LOGGER.severe("log must be a valid, existing file. Skipping operation.");
+            LOGGER.warn("log must be a valid, existing file. Skipping operation.");
             return;
         }
         if (StringUtils.isBlank(runnerContext.getLogsDir())) {
@@ -144,7 +147,39 @@ public class Logs implements LogHandler {
 //        Path destDir = getLogsDir(runnerContext.getLogsDir());
 //        Files.createDirectories(destDir);
         String filename = log.getName();
-        Files.copy(log.toPath(), Paths.get(destDir.toString(), filename));
+        Files.copy(log.toPath(), Paths.get(destDir.toString(), filename), REPLACE_EXISTING);
+    }
+
+    @Override
+    public void writeReport(RunnerContext runnerContext, String text) throws IOException {
+        Path destDir;
+        if (runnerContext instanceof TestRunnerContext){
+            TestRunnerContext testRunnerContext = (TestRunnerContext) runnerContext;
+            destDir = getLogsDir(testRunnerContext.getTestClass(), testRunnerContext.getTestMethod());
+        } else {
+            destDir = getArchiveLogsDir(runnerContext);
+        }
+        Files.write(Paths.get(destDir.toString(), "report.md"), text.getBytes(UTF_8), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        Path agregateReport = Paths.get(getLogsDir(runnerContext).toString(), "aggregated-report.md");
+        if (Files.notExists(agregateReport)) {
+            Files.write(agregateReport, ("# Aggregated Report\n\n").getBytes(UTF_8), StandardOpenOption.CREATE);
+        }
+        Files.write(agregateReport, text.getBytes(UTF_8), StandardOpenOption.APPEND);
+    }
+
+    /**
+     * Markdown needs two newlines to make a new paragraph.
+     */
+    @Override
+    public void appendln(StringBuilder s, String text) {
+        s.append(text);
+        s.append("\n\n");
+    }
+
+    @Override
+    public void appendlnSection(StringBuilder s, String text) {
+        s.append(text);
+        s.append("\n\n---\n");
     }
 
     @Override
@@ -161,6 +196,13 @@ public class Logs implements LogHandler {
     }
 
     @Override
+    public Path getLogsDir(String testClass, String testMethod) throws IOException {
+        Path destDir = new File(getLogsDir(testClass).toString() + File.separator + testMethod).toPath();
+        Files.createDirectories(destDir);
+        return destDir;
+    }
+
+    @Override
     public Path getLogsDir(String testClass) throws IOException {
         Path destDir = new File(Environment.getBaseDir() + File.separator + "testsuite" + File.separator + "target" +
                 File.separator + "archived-logs" + File.separator + testClass).toPath();
@@ -171,10 +213,10 @@ public class Logs implements LogHandler {
     @Override
     public void logMeasurements(LogBuilder.Log log, Path path) throws IOException {
         if (Files.notExists(path)) {
-            Files.write(path, (log.header + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE);
+            Files.write(path, (log.headerCSV + "\n").getBytes(UTF_8), StandardOpenOption.CREATE);
         }
-        Files.write(path, (log.line + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
-        LOGGER.info("\n" + log.header + "\n" + log.line);
+        Files.write(path, (log.lineCSV + "\n").getBytes(UTF_8), StandardOpenOption.APPEND);
+        LOGGER.info("\n" + log.headerCSV + "\n" + log.lineCSV);
     }
 
     /**
@@ -226,12 +268,12 @@ public class Logs implements LogHandler {
             }
         }
         if (startedStopped[0] == -1f) {
-            LOGGER.severe("Parsing start time from log failed. " +
+            LOGGER.error("Parsing start time from log failed. " +
                     "Might not be the right time to call this method. The process might have ben killed before it wrote to log." +
                     "Find " + log.getName() + " in your target dir.");
         }
         if (startedStopped[1] == -1f) {
-            LOGGER.severe("Parsing stop time from log failed. " +
+            LOGGER.error("Parsing stop time from log failed. " +
                     "Might not be the right time to call this method. The process might have been killed before it wrote to log." +
                     "Find " + log.getName() + " in your target dir.");
         }

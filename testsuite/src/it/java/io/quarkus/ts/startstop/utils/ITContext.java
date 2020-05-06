@@ -1,5 +1,7 @@
 package io.quarkus.ts.startstop.utils;
 
+import io.quarkus.ts.startstop.context.TestRunnerContext;
+
 import java.io.File;
 
 import static io.quarkus.ts.startstop.utils.Environment.getBaseDir;

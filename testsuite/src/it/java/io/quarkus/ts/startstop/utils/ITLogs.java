@@ -1,6 +1,8 @@
 package io.quarkus.ts.startstop.utils;
 
 import io.quarkus.ts.startstop.context.RunnerContext;
+import io.quarkus.ts.startstop.context.TestRunnerContext;
+import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Assertions;
 
 import java.io.File;
@@ -12,7 +14,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 public class ITLogs extends Logs {
@@ -51,7 +52,7 @@ public class ITLogs extends Logs {
             }
             Assertions.assertFalse(containsNotWhitelisted, "There are not-whitelisted artifacts without expected string " + jarSuffix + " suffix, see: \n"
                     + String.join("\n", reportArtifacts));
-            LOGGER.warning("There are whitelisted artifacts without expected string " + jarSuffix + " suffix, see: \n"
+            LOGGER.warn("There are whitelisted artifacts without expected string " + jarSuffix + " suffix, see: \n"
                     + String.join("\n", reportArtifacts));
         }
     }

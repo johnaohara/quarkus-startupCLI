@@ -1,0 +1,3 @@
+App,Mode,buildTimeMs,timeToFirstOKRequestMs,startedInMs,stoppedInMs,RSSKb,FDs
+app-jax-rs-minimal,JVM_UBER,7882,1134,848,33,99660,76
+app-jax-rs-minimal,JVM_UBER,7356,1135,815,38,100312,76

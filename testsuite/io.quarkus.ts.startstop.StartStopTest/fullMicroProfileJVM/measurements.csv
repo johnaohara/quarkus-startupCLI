@@ -1,0 +1,3 @@
+App,Mode,buildTimeMs,timeToFirstOKRequestMs,startedInMs,stoppedInMs,RSSKb,FDs
+app-full-microprofile,JVM,10003,1952,1659,35,193040,221
+app-full-microprofile,JVM,8200,1961,1651,30,172488,221

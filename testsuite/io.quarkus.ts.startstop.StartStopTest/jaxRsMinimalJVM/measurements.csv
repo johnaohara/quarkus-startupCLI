@@ -1,0 +1,3 @@
+App,Mode,buildTimeMs,timeToFirstOKRequestMs,startedInMs,stoppedInMs,RSSKb,FDs
+app-jax-rs-minimal,JVM,7512,1795,1302,34,136880,130
+app-jax-rs-minimal,JVM,5999,1390,1055,21,140920,130

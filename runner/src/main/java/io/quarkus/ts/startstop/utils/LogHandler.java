@@ -19,11 +19,19 @@ public interface LogHandler {
 
     void archiveLog(RunnerContext context, File log) throws IOException;
 
+    void writeReport(RunnerContext context, String text) throws IOException;
+
+    void appendln(StringBuilder s, String text);
+
+    void appendlnSection(StringBuilder s, String text);
+
     Path getArchiveLogsDir(RunnerContext context) throws IOException;
 
     Path getLogsDir(RunnerContext context) throws IOException;
 
     Path getLogsDir(String testClass) throws IOException;
+
+    Path getLogsDir(String testClass, String testMethod) throws IOException;
 
     void logMeasurements(LogBuilder.Log log, Path path) throws IOException;
 

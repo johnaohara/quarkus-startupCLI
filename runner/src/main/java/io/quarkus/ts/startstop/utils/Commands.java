@@ -24,29 +24,36 @@ import io.quarkus.ts.startstop.context.RunResult;
 import io.quarkus.ts.startstop.context.RunnerContext;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.jboss.logging.Logger;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 
 /**
@@ -58,29 +65,32 @@ public class Commands {
     public static final boolean isThisWindows = System.getProperty("os.name").matches(".*[Ww]indows.*");
     private static final Pattern numPattern = Pattern.compile("[ \t]*[0-9]+[ \t]*");
     private static final Pattern quarkusVersionPattern = Pattern.compile("[ \t]*<quarkus.version>([^<]*)</quarkus.version>.*");
-    private static final String ARTIFACT_GENERATOR_WORKSPACE = "ARTIFACT_GENERATOR_WORKSPACE";
-    private static final String MAVEN_REPO_LOCAL = "tests.maven.repo.local";
+    protected static final Pattern trailingSlash = Pattern.compile("/+$");
 
     public static String getArtifactGeneBaseDir() {
-        String env = System.getenv().get(ARTIFACT_GENERATOR_WORKSPACE);
-        if (StringUtils.isNotBlank(env)) {
-            return env;
-        }
-        String sys = System.getProperty(ARTIFACT_GENERATOR_WORKSPACE);
-        if (StringUtils.isNotBlank(sys)) {
-            return sys;
+        for (String p : new String[]{"ARTIFACT_GENERATOR_WORKSPACE", "artifact.generator.workspace"}) {
+            String env = System.getenv().get(p);
+            if (StringUtils.isNotBlank(env)) {
+                return env;
+            }
+            String sys = System.getProperty(p);
+            if (StringUtils.isNotBlank(sys)) {
+                return sys;
+            }
         }
         return System.getProperty("java.io.tmpdir");
     }
 
     public static String getLocalMavenRepoDir() {
-        String env = System.getenv().get(MAVEN_REPO_LOCAL);
-        if (StringUtils.isNotBlank(env)) {
-            return env;
-        }
-        String sys = System.getProperty(MAVEN_REPO_LOCAL);
-        if (StringUtils.isNotBlank(sys)) {
-            return sys;
+        for (String p : new String[]{"TESTS_MAVEN_REPO_LOCAL", "tests.maven.repo.local"}) {
+            String env = System.getenv().get(p);
+            if (StringUtils.isNotBlank(env)) {
+                return env;
+            }
+            String sys = System.getProperty(p);
+            if (StringUtils.isNotBlank(sys)) {
+                return sys;
+            }
         }
         return System.getProperty("user.home") + File.separator + ".m2" + File.separator + "repository";
     }
@@ -96,7 +106,7 @@ public class Commands {
                 return sys;
             }
         }
-        LOGGER.warning("Failed to detect quarkus.platform.version/QUARKUS_PLATFORM_VERSION, defaulting to getQuarkusVersion().");
+        LOGGER.warn("Failed to detect quarkus.platform.version/QUARKUS_PLATFORM_VERSION, defaulting to getQuarkusVersion().");
         return getQuarkusVersion(appPath);
     }
 
@@ -136,14 +146,15 @@ public class Commands {
         throw new IllegalArgumentException(failure);
     }
 
+
     public static void cleanTarget(RunnerContext runnerContext) {
         String target = runnerContext.getAppDir() + File.separator + "target";
         String logs = runnerContext.getAppDir() + File.separator + "logs";
-        cleanDir(target, logs);
+        cleanDirOrFile(target, logs);
     }
 
-    public static void cleanDir(String... dir) {
-        for (String s : dir) {
+    public static void cleanDirOrFile(String... path) {
+        for (String s : path) {
             try {
                 FileUtils.forceDelete(new File(s));
             } catch (IOException e) {
@@ -326,7 +337,7 @@ public class Commands {
                 Runtime.getRuntime().exec(new String[]{"kill", force ? "-9" : "-15", Long.toString(pid)});
             }
         } catch (IOException | InterruptedException e) {
-            LOGGER.severe(e.getMessage());
+            LOGGER.error(e.getMessage(), e);
         }
     }
 
