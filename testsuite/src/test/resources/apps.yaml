@@ -55,17 +55,15 @@ modes:
 validationUrls:
   http://localhost:8080: Hello from a full MicroProfile suite
   http://localhost:8080/data/hello: Hello World
-  logHandlerhttp://localhost:8080: Hello from a full MicroProfile suite
-  logHandlerhttp://localhost:8080/data/hello: Hello World
-  logHandlerhttp://localhost:8080/data/config/injected: Config value as Injected by CDI Injected value
-  logHandlerhttp://localhost:8080/data/config/lookup: Config value from ConfigProvider lookup value
-  logHandlerhttp://localhost:8080/data/resilience: Fallback answer due to timeout
-  logHandlerhttp://localhost:8080/health: \"UP\"
-  logHandlerhttp://localhost:8080/data/metric/timed: Request is used in statistics, check with the Metrics call.
-  logHandlerhttp://localhost:8080/metrics: ontroller_timed_request_seconds_count
-  logHandlerhttp://localhost:8080/data/secured/test: Jessie specific value
-  logHandlerhttp://localhost:8080/openapi: /resilience
-  logHandlerhttp://localhost:8080/data/client/test/parameterValue=xxx: Processed parameter value 'parameterValue=xxx'"}
+  http://localhost:8080/data/config/injected: Config value as Injected by CDI Injected value
+  http://localhost:8080/data/config/lookup: Config value from ConfigProvider lookup value
+  http://localhost:8080/data/resilience: Fallback answer due to timeout
+  http://localhost:8080/health: \"UP\"
+  http://localhost:8080/data/metric/timed: Request is used in statistics, check with the Metrics call.
+  http://localhost:8080/metrics: ontroller_timed_request_seconds_count
+  http://localhost:8080/data/secured/test: Jessie specific value
+  http://localhost:8080/openapi: /resilience
+  http://localhost:8080/data/client/test/parameterValue=xxx: Processed parameter value 'parameterValue=xxx'"}
 whitelistLogLines:
   - maven-error-diagnostics
   - errorprone
